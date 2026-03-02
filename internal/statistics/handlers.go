@@ -1,12 +1,18 @@
-package grieflogger
+package statistics
 
 import (
 	"context"
 	"log"
+	"net/http"
 	"slices"
 
 	repo "github.com/Will-Gould/psmp-api/internal/adapters/mysql/sqlc"
+	"github.com/Will-Gould/psmp-api/internal/json"
+	"github.com/go-chi/chi"
 )
+
+const BLOCK_BROKEN_ACTION = 0
+const BLOCK_PLACED_ACTION = 1
 
 var BannedPlacedMaterialsList = []string{
 	"short_grass",
@@ -126,14 +132,24 @@ var BannedBrokenMaterialsList = []string{
 	"snow",
 }
 
-type GriefLoggerHandler struct {
+type StatisticsHandler struct {
 	Service               Service
 	Materials             []repo.Material
 	BannedPlacedMaterials []int32
 	BannedBrokenMaterials []int32
 }
 
-func NewHandler(service Service) *GriefLoggerHandler {
+type Overview struct {
+	BlocksBroken int64
+	BlocksPlaced int64
+}
+
+type BlockData struct {
+	BlocksBroken []repo.Block
+	BlocksPlaced []repo.Block
+}
+
+func NewHandler(service Service) *StatisticsHandler {
 	var bannedPlacedMaterials []int32
 	var bannedBrokenMaterials []int32
 
@@ -154,18 +170,58 @@ func NewHandler(service Service) *GriefLoggerHandler {
 		}
 	}
 
-	// for _, m := range bannedPlacedMaterials {
-	// 	fmt.Printf("Banned placed material ID: %v\n", m)
-	// }
-
-	// for _, m := range bannedBrokenMaterials {
-	// 	fmt.Printf("Banned broken material ID: %v\n", m)
-	// }
-
-	return &GriefLoggerHandler{
+	return &StatisticsHandler{
 		Service:               service,
 		Materials:             materials,
 		BannedPlacedMaterials: bannedPlacedMaterials,
 		BannedBrokenMaterials: bannedBrokenMaterials,
 	}
+}
+
+func (sh StatisticsHandler) ShowPlayerOverview(w http.ResponseWriter, r *http.Request) {
+	playerUuid := chi.URLParam(r, "uuid")
+	overview := Overview{}
+
+	glUser, err := sh.Service.FindGriefLoggerUser(r.Context(), playerUuid)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	blocksBroken, err := sh.Service.CountBlocksByUser(r.Context(), glUser.ID, BLOCK_BROKEN_ACTION, sh.BannedBrokenMaterials)
+	blocksPlaced, err := sh.Service.CountBlocksByUser(r.Context(), glUser.ID, BLOCK_PLACED_ACTION, sh.BannedPlacedMaterials)
+
+	overview.BlocksBroken = blocksBroken
+	overview.BlocksPlaced = blocksPlaced
+
+	json.Write(w, http.StatusOK, overview)
+}
+
+func (sh StatisticsHandler) ListBlockData(w http.ResponseWriter, r *http.Request) {
+	playerUuid := chi.URLParam(r, "uuid")
+	blockData := BlockData{}
+
+	glUser, err := sh.Service.FindGriefLoggerUser(r.Context(), playerUuid)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	// get block data
+	blocksBroken, err := sh.Service.ListBlocksBrokenByUser(r.Context(), glUser.ID)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	blocksPlaced, err := sh.Service.ListBlocksPlacedByUser(r.Context(), glUser.ID)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	blockData.BlocksBroken = blocksBroken
+	blockData.BlocksPlaced = blocksPlaced
+	json.Write(w, http.StatusOK, blockData)
 }

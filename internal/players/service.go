@@ -10,8 +10,6 @@ type Service interface {
 	ListPlayers(ctx context.Context) ([]repo.LuckpermsPlayer, error)
 	FindLuckpermsPlayer(ctx context.Context, uuid string) (repo.LuckpermsPlayer, error)
 	FindGriefLoggerUser(ctx context.Context, uuid string) (repo.User, error)
-	FindBlocksPlacedByPlayer(ctx context.Context, p Player) ([]repo.Block, error)
-	FindBlocksBrokenByPlayer(ctx context.Context, p Player) ([]repo.Block, error)
 }
 
 type svc struct {
@@ -32,12 +30,4 @@ func (s svc) FindLuckpermsPlayer(ctx context.Context, uuid string) (repo.Luckper
 
 func (s svc) FindGriefLoggerUser(ctx context.Context, uuid string) (repo.User, error) {
 	return s.repo.FindGriefLoggerUserByUuid(ctx, uuid)
-}
-
-func (s svc) FindBlocksPlacedByPlayer(ctx context.Context, p Player) ([]repo.Block, error) {
-	return s.repo.ListBlocksPlacedByUser(ctx, p.GriefLoggerId)
-}
-
-func (s svc) FindBlocksBrokenByPlayer(ctx context.Context, p Player) ([]repo.Block, error) {
-	return s.repo.ListBlocksPlacedByUser(ctx, p.GriefLoggerId)
 }

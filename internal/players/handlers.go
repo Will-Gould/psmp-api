@@ -6,15 +6,12 @@ import (
 	"log"
 	"net/http"
 
-	repo "github.com/Will-Gould/psmp-api/internal/adapters/mysql/sqlc"
-	"github.com/Will-Gould/psmp-api/internal/grieflogger"
 	"github.com/Will-Gould/psmp-api/internal/json"
 	"github.com/go-chi/chi"
 )
 
 type handler struct {
 	service Service
-	glh     *grieflogger.GriefLoggerHandler
 }
 
 type Player struct {
@@ -24,20 +21,9 @@ type Player struct {
 	Username      string
 }
 
-type Overview struct {
-	BlocksBroken int64
-	BlocksPlaced int64
-}
-
-type BlockData struct {
-	BlocksBroken []repo.Block
-	BlocksPlaced []repo.Block
-}
-
-func NewHandler(service Service, glh *grieflogger.GriefLoggerHandler) *handler {
+func NewHandler(service Service) *handler {
 	return &handler{
 		service: service,
-		glh:     glh,
 	}
 }
 
@@ -84,61 +70,4 @@ func (h handler) ListPlayer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.Write(w, http.StatusOK, player)
-}
-
-func (h handler) ListPlayerBlockData(w http.ResponseWriter, r *http.Request) {
-	playerUuid := chi.URLParam(r, "uuid")
-	blockData := BlockData{}
-
-	// get player
-	player, err := h.getPlayer(r.Context(), playerUuid)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// get block data
-	blocksBroken, err := h.service.FindBlocksBrokenByPlayer(r.Context(), player)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	blocksPlaced, err := h.service.FindBlocksPlacedByPlayer(r.Context(), player)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	blockData.BlocksBroken = blocksBroken
-	blockData.BlocksPlaced = blocksPlaced
-
-	json.Write(w, http.StatusOK, blockData)
-}
-
-func (h handler) GetPlayerOverview(w http.ResponseWriter, r *http.Request) {
-	playerUuid := chi.URLParam(r, "uuid")
-	overview := Overview{}
-
-	// get player
-	player, err := h.getPlayer(r.Context(), playerUuid)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// blocksBroken, err := h.service.CountBlocksBroken(r.Context(), player.GriefLoggerId, h.glh.BannedBrokenMaterials)
-	blocksBroken, err := h.glh.Service.CountBlocksBrokenByUser(r.Context(), player.GriefLoggerId, h.glh.BannedBrokenMaterials)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	overview.BlocksBroken = blocksBroken
-
-	json.Write(w, http.StatusOK, overview)
 }

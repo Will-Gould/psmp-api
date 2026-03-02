@@ -17,7 +17,7 @@ type Querier interface {
 	ListMaterials(ctx context.Context) ([]Material, error)
 
 	// dynamic queries
-	CountBlocksBrokenByUser(ctx context.Context, user int32, banned []int32) (int64, error)
+	CountBlocksByUser(ctx context.Context, user int32, action int32, banned []int32) (int64, error)
 }
 
 var _ Querier = (*Queries)(nil)
