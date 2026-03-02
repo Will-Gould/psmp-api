@@ -1,0 +1,43 @@
+package players
+
+import (
+	"context"
+
+	repo "github.com/Will-Gould/psmp-api/internal/adapters/mysql/sqlc"
+)
+
+type Service interface {
+	ListPlayers(ctx context.Context) ([]repo.LuckpermsPlayer, error)
+	FindLuckpermsPlayer(ctx context.Context, uuid string) (repo.LuckpermsPlayer, error)
+	FindGriefLoggerUser(ctx context.Context, uuid string) (repo.User, error)
+	FindBlocksPlacedByPlayer(ctx context.Context, p Player) ([]repo.Block, error)
+	FindBlocksBrokenByPlayer(ctx context.Context, p Player) ([]repo.Block, error)
+}
+
+type svc struct {
+	repo repo.Querier
+}
+
+func NewService(repo repo.Querier) Service {
+	return &svc{repo: repo}
+}
+
+func (s svc) ListPlayers(ctx context.Context) ([]repo.LuckpermsPlayer, error) {
+	return s.repo.ListLuckpermsPlayers(ctx)
+}
+
+func (s svc) FindLuckpermsPlayer(ctx context.Context, uuid string) (repo.LuckpermsPlayer, error) {
+	return s.repo.FindLuckpermsPlayerByUuid(ctx, uuid)
+}
+
+func (s svc) FindGriefLoggerUser(ctx context.Context, uuid string) (repo.User, error) {
+	return s.repo.FindGriefLoggerUserByUuid(ctx, uuid)
+}
+
+func (s svc) FindBlocksPlacedByPlayer(ctx context.Context, p Player) ([]repo.Block, error) {
+	return s.repo.ListBlocksPlacedByUser(ctx, p.GriefLoggerId)
+}
+
+func (s svc) FindBlocksBrokenByPlayer(ctx context.Context, p Player) ([]repo.Block, error) {
+	return s.repo.ListBlocksPlacedByUser(ctx, p.GriefLoggerId)
+}
