@@ -1,0 +1,11 @@
+version: "2"
+sql:
+  - engine: "mysql"
+    queries: "./internal/adapters/mysql/sqlc/queries.sql"
+    schema: "./internal/adapters/mysql/migrations"
+    gen:
+      go:
+        package: "repo"
+        out: "./internal/adapters/mysql/sqlc"
+        emit_json_tags: true
+        emit_interface: true # Generate Querier interface
