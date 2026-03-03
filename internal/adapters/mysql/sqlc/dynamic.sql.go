@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-const CountBlocksByUser = `-- name: CountBlocksBrokenByUser :many
+const CountBlocksByUser = `-- name: CountBlocksBrokenByUser :one
 SELECT
   count(*)
 FROM

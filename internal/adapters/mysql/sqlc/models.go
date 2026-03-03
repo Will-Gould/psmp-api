@@ -26,6 +26,16 @@ type Material struct {
 	Name string `json:"name"`
 }
 
+type Session struct {
+	Time   int64 `json:"time"`
+	User   int32 `json:"user"`
+	Level  int32 `json:"level"`
+	X      int32 `json:"x"`
+	Y      int32 `json:"y"`
+	Z      int32 `json:"z"`
+	Action int32 `json:"action"`
+}
+
 type User struct {
 	ID   int32  `json:"id"`
 	Name string `json:"name"`

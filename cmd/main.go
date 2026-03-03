@@ -7,11 +7,14 @@ import (
 	"os"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/joho/godotenv"
 
 	"github.com/Will-Gould/psmp-api/internal/env"
 )
 
 func main() {
+
+	godotenv.Load(".env")
 
 	fmt.Println(`
 ██████╗  █████╗  ██████╗██╗███████╗██╗ ██████╗    ███████╗███╗   ███╗██████╗ 
@@ -39,7 +42,7 @@ func main() {
 		panic(err)
 	}
 	defer db.Close()
-	logger.Info("Connected to database", "dsn", cfg.db.dsn)
+	logger.Info("Connected to database")
 
 	api := application{
 		config: cfg,

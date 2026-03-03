@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"slices"
+	"sort"
 
 	repo "github.com/Will-Gould/psmp-api/internal/adapters/mysql/sqlc"
 	"github.com/Will-Gould/psmp-api/internal/json"
@@ -13,6 +14,8 @@ import (
 
 const BLOCK_BROKEN_ACTION = 0
 const BLOCK_PLACED_ACTION = 1
+const PLAYER_JOIN_ACTION = 0
+const PLAYER_LEAVE_ACTION = 1
 
 var BannedPlacedMaterialsList = []string{
 	"short_grass",
@@ -142,6 +145,7 @@ type StatisticsHandler struct {
 type Overview struct {
 	BlocksBroken int64
 	BlocksPlaced int64
+	TimePlayed   int64
 }
 
 type BlockData struct {
@@ -154,6 +158,7 @@ func NewHandler(service Service) *StatisticsHandler {
 	var bannedBrokenMaterials []int32
 
 	// get materials mapping
+	log.Printf("Mapping materials \n")
 	materials, err := service.ListMaterials(context.Background())
 	if err != nil {
 		log.Default()
@@ -161,6 +166,7 @@ func NewHandler(service Service) *StatisticsHandler {
 	}
 
 	// add banned material IDs
+	log.Printf("Banning materials")
 	for _, m := range materials {
 		if slices.Contains(BannedPlacedMaterialsList, m.Name) {
 			bannedPlacedMaterials = append(bannedPlacedMaterials, m.ID)
@@ -188,11 +194,15 @@ func (sh StatisticsHandler) ShowPlayerOverview(w http.ResponseWriter, r *http.Re
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
+	// count blocks
 	blocksBroken, err := sh.Service.CountBlocksByUser(r.Context(), glUser.ID, BLOCK_BROKEN_ACTION, sh.BannedBrokenMaterials)
 	blocksPlaced, err := sh.Service.CountBlocksByUser(r.Context(), glUser.ID, BLOCK_PLACED_ACTION, sh.BannedPlacedMaterials)
-
 	overview.BlocksBroken = blocksBroken
 	overview.BlocksPlaced = blocksPlaced
+
+	// count time played
+	sessions, err := sh.Service.ListSessionDataByUser(r.Context(), glUser.ID)
+	overview.TimePlayed = countTimePlayed(sessions)
 
 	json.Write(w, http.StatusOK, overview)
 }
@@ -224,4 +234,48 @@ func (sh StatisticsHandler) ListBlockData(w http.ResponseWriter, r *http.Request
 	blockData.BlocksBroken = blocksBroken
 	blockData.BlocksPlaced = blocksPlaced
 	json.Write(w, http.StatusOK, blockData)
+}
+
+func (sh StatisticsHandler) ListSessionData(w http.ResponseWriter, r *http.Request) {
+	playerUuid := chi.URLParam(r, "uuid")
+
+	glUser, err := sh.Service.FindGriefLoggerUser(r.Context(), playerUuid)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	sessions, err := sh.Service.ListSessionDataByUser(r.Context(), glUser.ID)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	json.Write(w, http.StatusOK, sessions)
+}
+
+func countTimePlayed(sessions []repo.Session) int64 {
+	// check if there are no sessions
+	if len(sessions) < 1 {
+		return 0
+	}
+
+	// make sure slice is in chronological order
+	sort.Slice(sessions, func(i, j int) bool {
+		if sessions[i].Time < sessions[j].Time {
+			return true
+		}
+		return false
+	})
+
+	var timePlayed int64
+	var lastSession = sessions[0]
+	for _, s := range sessions {
+		if lastSession.Action == PLAYER_JOIN_ACTION && s.Action == PLAYER_LEAVE_ACTION {
+			timePlayed += (s.Time - lastSession.Time)
+		}
+		lastSession = s
+	}
+
+	return timePlayed / 1000
 }

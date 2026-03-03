@@ -12,6 +12,7 @@ type Service interface {
 	CountBlocksByUser(ctx context.Context, id int32, action int32, banned []int32) (int64, error)
 	ListBlocksBrokenByUser(ctx context.Context, id int32) ([]repo.Block, error)
 	ListBlocksPlacedByUser(ctx context.Context, id int32) ([]repo.Block, error)
+	ListSessionDataByUser(ctx context.Context, id int32) ([]repo.Session, error)
 }
 
 type svc struct {
@@ -40,4 +41,8 @@ func (s svc) ListBlocksPlacedByUser(ctx context.Context, id int32) ([]repo.Block
 
 func (s svc) CountBlocksByUser(ctx context.Context, id int32, action int32, banned []int32) (int64, error) {
 	return s.repo.CountBlocksByUser(ctx, id, action, banned)
+}
+
+func (s svc) ListSessionDataByUser(ctx context.Context, id int32) ([]repo.Session, error) {
+	return s.repo.ListSessionDataByUser(ctx, id)
 }

@@ -45,3 +45,11 @@ FROM
   users
 WHERE
   uuid = ?;
+
+-- name: ListSessionDataByUser :many
+SELECT
+  *
+FROM
+  sessions
+WHERE
+  user = ?;

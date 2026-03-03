@@ -46,6 +46,7 @@ func (app application) mount() http.Handler {
 	statisticsHandler := statistics.NewHandler(statisticsService)
 	r.Get("/statistics/{uuid}", statisticsHandler.ShowPlayerOverview)
 	r.Get("/statistics/{uuid}/block-data", statisticsHandler.ListBlockData)
+	r.Get("/statistics/{uuid}/sessions", statisticsHandler.ListSessionData)
 
 	return r
 }

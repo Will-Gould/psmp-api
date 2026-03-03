@@ -15,8 +15,9 @@ type Querier interface {
 	ListBlocksPlacedByUser(ctx context.Context, user int32) ([]Block, error)
 	ListLuckpermsPlayers(ctx context.Context) ([]LuckpermsPlayer, error)
 	ListMaterials(ctx context.Context) ([]Material, error)
+	ListSessionDataByUser(ctx context.Context, user int32) ([]Session, error)
 
-	// dynamic queries
+	//dynamic queries
 	CountBlocksByUser(ctx context.Context, user int32, action int32, banned []int32) (int64, error)
 }
 

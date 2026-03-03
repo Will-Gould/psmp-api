@@ -186,3 +186,43 @@ func (q *Queries) ListMaterials(ctx context.Context) ([]Material, error) {
 	}
 	return items, nil
 }
+
+const listSessionDataByUser = `-- name: ListSessionDataByUser :many
+SELECT
+  time, user, level, x, y, z, action
+FROM
+  sessions
+WHERE
+  user = ?
+`
+
+func (q *Queries) ListSessionDataByUser(ctx context.Context, user int32) ([]Session, error) {
+	rows, err := q.db.QueryContext(ctx, listSessionDataByUser, user)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Session
+	for rows.Next() {
+		var i Session
+		if err := rows.Scan(
+			&i.Time,
+			&i.User,
+			&i.Level,
+			&i.X,
+			&i.Y,
+			&i.Z,
+			&i.Action,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
