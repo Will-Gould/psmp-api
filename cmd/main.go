@@ -1,14 +1,17 @@
 package main
 
 import (
+	"context"
 	"database/sql"
-	"fmt"
 	"log/slog"
 	"os"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
+	"github.com/lmittmann/tint"
 
+	"github.com/Will-Gould/psmp-api/assets"
 	"github.com/Will-Gould/psmp-api/internal/env"
 )
 
@@ -16,14 +19,7 @@ func main() {
 
 	godotenv.Load(".env")
 
-	fmt.Println(`
-██████╗  █████╗  ██████╗██╗███████╗██╗ ██████╗    ███████╗███╗   ███╗██████╗ 
-██╔══██╗██╔══██╗██╔════╝██║██╔════╝██║██╔════╝    ██╔════╝████╗ ████║██╔══██╗
-██████╔╝███████║██║     ██║█████╗  ██║██║         ███████╗██╔████╔██║██████╔╝
-██╔═══╝ ██╔══██║██║     ██║██╔══╝  ██║██║         ╚════██║██║╚██╔╝██║██╔═══╝ 
-██║     ██║  ██║╚██████╗██║██║     ██║╚██████╗    ███████║██║ ╚═╝ ██║██║     
-╚═╝     ╚═╝  ╚═╝ ╚═════╝╚═╝╚═╝     ╚═╝ ╚═════╝    ╚══════╝╚═╝     ╚═╝╚═╝     
-`)
+	assets.PrintLogo()
 
 	cfg := config{
 		addr: ":8080",
@@ -33,8 +29,15 @@ func main() {
 	}
 
 	// Structured logging
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	slog.SetDefault(logger)
+	w := os.Stderr
+	// logger := slog.New(tint.NewHandler(w, nil))
+	slog.SetDefault(slog.New(
+		tint.NewHandler(w, &tint.Options{
+			Level:      slog.LevelDebug,
+			TimeFormat: time.Kitchen,
+		},
+		),
+	))
 
 	// Database
 	db, err := sql.Open("mysql", cfg.db.dsn)
@@ -42,7 +45,7 @@ func main() {
 		panic(err)
 	}
 	defer db.Close()
-	logger.Info("Connected to database")
+	slog.Log(context.Background(), slog.LevelInfo, "Connected to database")
 
 	api := application{
 		config: cfg,

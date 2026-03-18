@@ -3,6 +3,7 @@ package statistics
 import (
 	"context"
 	"log"
+	"log/slog"
 	"net/http"
 	"slices"
 	"sort"
@@ -158,7 +159,7 @@ func NewHandler(service Service) *StatisticsHandler {
 	var bannedBrokenMaterials []int32
 
 	// get materials mapping
-	log.Printf("Mapping materials \n")
+	slog.Log(context.Background(), slog.LevelInfo, "Punching trees...")
 	materials, err := service.ListMaterials(context.Background())
 	if err != nil {
 		log.Default()
@@ -166,7 +167,7 @@ func NewHandler(service Service) *StatisticsHandler {
 	}
 
 	// add banned material IDs
-	log.Printf("Banning materials")
+	slog.Log(context.Background(), slog.LevelInfo, "Killing zombies...")
 	for _, m := range materials {
 		if slices.Contains(BannedPlacedMaterialsList, m.Name) {
 			bannedPlacedMaterials = append(bannedPlacedMaterials, m.ID)
