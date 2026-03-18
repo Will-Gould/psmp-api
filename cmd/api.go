@@ -61,7 +61,7 @@ func (app application) run(h http.Handler) error {
 		IdleTimeout:  time.Minute,
 	}
 
-	message := "Server has started at address:" + app.config.addr
+	message := "Server has started on port " + app.config.addr
 	slog.Info(message)
 
 	return srv.ListenAndServe()
