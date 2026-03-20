@@ -44,9 +44,11 @@ func (app application) mount() http.Handler {
 	// Start statistics service & handler
 	statisticsService := statistics.NewService(repo)
 	statisticsHandler := statistics.NewHandler(statisticsService)
+	r.Get("/statistics/mappings", statisticsHandler.GetMappings)
 	r.Get("/statistics/{uuid}", statisticsHandler.ShowPlayerOverview)
 	r.Get("/statistics/{uuid}/block-data", statisticsHandler.ListBlockData)
 	r.Get("/statistics/{uuid}/sessions", statisticsHandler.ListSessionData)
+	r.Get("/statistics/{uuid}/deaths", statisticsHandler.ListDeaths)
 
 	return r
 }

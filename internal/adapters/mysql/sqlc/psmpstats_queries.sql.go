@@ -26,7 +26,7 @@ func (q *Queries) CountDeathsByUuid(ctx context.Context, playerUuid string) (int
 	return count, err
 }
 
-const countMobsKilledByUUid = `-- name: CountMobsKilledByUUid :one
+const countMobsKilledByUuid = `-- name: CountMobsKilledByUuid :one
 SELECT
   count(*)
 FROM
@@ -35,8 +35,8 @@ WHERE
   player_uuid = ?
 `
 
-func (q *Queries) CountMobsKilledByUUid(ctx context.Context, playerUuid string) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countMobsKilledByUUid, playerUuid)
+func (q *Queries) CountMobsKilledByUuid(ctx context.Context, playerUuid string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countMobsKilledByUuid, playerUuid)
 	var count int64
 	err := row.Scan(&count)
 	return count, err

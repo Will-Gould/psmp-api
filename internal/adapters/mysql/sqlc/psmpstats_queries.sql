@@ -72,7 +72,7 @@ FROM
 WHERE
   player_uuid = ?;
 
--- name: CountMobsKilledByUUid :one
+-- name: CountMobsKilledByUuid :one
 SELECT
   count(*)
 FROM

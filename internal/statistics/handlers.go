@@ -141,12 +141,17 @@ type StatisticsHandler struct {
 	Materials             []repo.Material
 	BannedPlacedMaterials []int32
 	BannedBrokenMaterials []int32
+	CauseMapping          []repo.PsmpstatsCause
+	MobMapping            []repo.PsmpstatsMob
 }
 
 type Overview struct {
 	BlocksBroken int64
 	BlocksPlaced int64
 	TimePlayed   int64
+	Deaths       int64
+	PvpKills     int64
+	MobsKilled   int64
 }
 
 type BlockData struct {
@@ -167,7 +172,7 @@ func NewHandler(service Service) *StatisticsHandler {
 	}
 
 	// add banned material IDs
-	slog.Log(context.Background(), slog.LevelInfo, "Killing zombies...")
+	slog.Log(context.Background(), slog.LevelInfo, "Brewing potions...")
 	for _, m := range materials {
 		if slices.Contains(BannedPlacedMaterialsList, m.Name) {
 			bannedPlacedMaterials = append(bannedPlacedMaterials, m.ID)
@@ -177,11 +182,29 @@ func NewHandler(service Service) *StatisticsHandler {
 		}
 	}
 
+	// get mob mapping
+	slog.Log(context.Background(), slog.LevelInfo, "Killing zombies...")
+	mobMap, err := service.ListMobs(context.Background())
+	if err != nil {
+		slog.Log(context.Background(), slog.LevelError, "Failed to get mob mapping")
+		log.Panic()
+	}
+
+	// get death cause mapping
+	slog.Log(context.Background(), slog.LevelInfo, "Jumping over ravines...")
+	causeMap, err := service.ListCausesOfDeath(context.Background())
+	if err != nil {
+		slog.Log(context.Background(), slog.LevelError, "Failed to get causes of death mapping")
+		log.Panic()
+	}
+
 	return &StatisticsHandler{
 		Service:               service,
 		Materials:             materials,
 		BannedPlacedMaterials: bannedPlacedMaterials,
 		BannedBrokenMaterials: bannedBrokenMaterials,
+		CauseMapping:          causeMap,
+		MobMapping:            mobMap,
 	}
 }
 
@@ -204,6 +227,19 @@ func (sh StatisticsHandler) ShowPlayerOverview(w http.ResponseWriter, r *http.Re
 	// count time played
 	sessions, err := sh.Service.ListSessionDataByUser(r.Context(), glUser.ID)
 	overview.TimePlayed = countTimePlayed(sessions)
+
+	// count deaths
+	deaths, err := sh.Service.CountDeathsByPlayer(r.Context(), playerUuid)
+
+	// count PvP kills
+	pvpKills, err := sh.Service.CountPvpKillsByPlayer(r.Context(), playerUuid)
+
+	// count mobs killed
+	mobsKilled, err := sh.Service.CountMobKillsByPlayer(r.Context(), playerUuid)
+
+	overview.Deaths = deaths
+	overview.PvpKills = pvpKills
+	overview.MobsKilled = mobsKilled
 
 	json.Write(w, http.StatusOK, overview)
 }
@@ -253,6 +289,30 @@ func (sh StatisticsHandler) ListSessionData(w http.ResponseWriter, r *http.Reque
 	}
 
 	json.Write(w, http.StatusOK, sessions)
+}
+
+func (sh StatisticsHandler) ListDeaths(w http.ResponseWriter, r *http.Request) {
+	playerUuid := chi.URLParam(r, "uuid")
+
+	deaths, err := sh.Service.ListDeathsByPlayer(r.Context(), playerUuid)
+	if err != nil {
+		slog.Log(r.Context(), slog.LevelError, "Failed to retrieve deaths")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	json.Write(w, http.StatusOK, deaths)
+}
+
+func (sh StatisticsHandler) GetMappings(w http.ResponseWriter, r *http.Request) {
+
+	maps := struct {
+		MobMap   []repo.PsmpstatsMob
+		CauseMap []repo.PsmpstatsCause
+	}{
+		MobMap:   sh.MobMapping,
+		CauseMap: sh.CauseMapping,
+	}
+	json.Write(w, http.StatusOK, maps)
 }
 
 func countTimePlayed(sessions []repo.Session) int64 {
