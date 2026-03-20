@@ -6,15 +6,28 @@ package repo
 
 import (
 	"context"
+	"database/sql"
 )
 
 type Querier interface {
+	CountDeathsByUuid(ctx context.Context, playerUuid string) (int64, error)
+	CountMobsKilledByUUid(ctx context.Context, playerUuid string) (int64, error)
+	CountPvpKillsByUuid(ctx context.Context, playerUuid string) (int64, error)
+	CountSpecificMobKillsByUuid(ctx context.Context, arg CountSpecificMobKillsByUuidParams) (int64, error)
 	FindGriefLoggerUserByUuid(ctx context.Context, uuid string) (User, error)
 	FindLuckpermsPlayerByUuid(ctx context.Context, uuid string) (LuckpermsPlayer, error)
+	FindPsmpstatsPlayerByUuid(ctx context.Context, uuid string) (PsmpstatsPlayer, error)
+	ListAdvancements(ctx context.Context) ([]PsmpstatsAdvancement, error)
+	ListAdvancementsByUuid(ctx context.Context, playerUuid sql.NullString) ([]PsmpstatsPlayerAdvancement, error)
 	ListBlocksBrokenByUser(ctx context.Context, user int32) ([]Block, error)
 	ListBlocksPlacedByUser(ctx context.Context, user int32) ([]Block, error)
+	ListCausesOfDeath(ctx context.Context) ([]PsmpstatsCause, error)
+	ListDeathsByUuid(ctx context.Context, playerUuid string) ([]PsmpstatsDeath, error)
 	ListLuckpermsPlayers(ctx context.Context) ([]LuckpermsPlayer, error)
 	ListMaterials(ctx context.Context) ([]Material, error)
+	ListMobKillsByUuid(ctx context.Context, playerUuid string) ([]PsmpstatsMobKill, error)
+	ListMobs(ctx context.Context) ([]PsmpstatsMob, error)
+	ListPvpKillsByUuid(ctx context.Context, playerUuid string) ([]PsmpstatsCombat, error)
 	ListSessionDataByUser(ctx context.Context, user int32) ([]Session, error)
 
 	//dynamic queries
