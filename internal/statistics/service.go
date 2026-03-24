@@ -19,6 +19,9 @@ type Service interface {
 	CountMobKillsByPlayer(ctx context.Context, uuid string) (int64, error)
 	ListMobs(ctx context.Context) ([]repo.PsmpstatsMob, error)
 	ListCausesOfDeath(ctx context.Context) ([]repo.PsmpstatsCause, error)
+	CountSpecificMobKillsByUuid(ctx context.Context, name string, uuid string) (int64, error)
+	FindPsmpstatsPlayerByUuid(ctx context.Context, uuid string) (repo.PsmpstatsPlayer, error)
+	FindLuckpermsPlayer(ctx context.Context, uuid string) (repo.LuckpermsPlayer, error)
 }
 
 type svc struct {
@@ -75,4 +78,20 @@ func (s svc) ListMobs(ctx context.Context) ([]repo.PsmpstatsMob, error) {
 
 func (s svc) ListCausesOfDeath(ctx context.Context) ([]repo.PsmpstatsCause, error) {
 	return s.repo.ListCausesOfDeath(ctx)
+}
+
+func (s svc) CountSpecificMobKillsByUuid(ctx context.Context, name string, uuid string) (int64, error) {
+	return s.repo.CountSpecificMobKillsByUuid(ctx,
+		repo.CountSpecificMobKillsByUuidParams{
+			PlayerUuid: uuid,
+			Name:       name,
+		})
+}
+
+func (s svc) FindPsmpstatsPlayerByUuid(ctx context.Context, uuid string) (repo.PsmpstatsPlayer, error) {
+	return s.repo.FindPsmpstatsPlayerByUuid(ctx, uuid)
+}
+
+func (s svc) FindLuckpermsPlayer(ctx context.Context, uuid string) (repo.LuckpermsPlayer, error) {
+	return s.repo.FindLuckpermsPlayerByUuid(ctx, uuid)
 }

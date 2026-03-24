@@ -26,6 +26,22 @@ func (q *Queries) CountDeathsByUuid(ctx context.Context, playerUuid string) (int
 	return count, err
 }
 
+const countDiamondsMinedByUuid = `-- name: CountDiamondsMinedByUuid :one
+SELECT
+  diamonds_mined
+FROM
+  psmpstats_players
+WHERE
+  uuid = ?
+`
+
+func (q *Queries) CountDiamondsMinedByUuid(ctx context.Context, uuid string) (int32, error) {
+	row := q.db.QueryRowContext(ctx, countDiamondsMinedByUuid, uuid)
+	var diamonds_mined int32
+	err := row.Scan(&diamonds_mined)
+	return diamonds_mined, err
+}
+
 const countMobsKilledByUuid = `-- name: CountMobsKilledByUuid :one
 SELECT
   count(*)
@@ -66,16 +82,23 @@ FROM
 WHERE
   player_uuid = ?
 AND
-  mob = ?
+  mob = (
+    SELECT
+      id
+    FROM
+      psmpstats_mobs
+    WHERE
+      name = ?
+  )
 `
 
 type CountSpecificMobKillsByUuidParams struct {
 	PlayerUuid string `json:"player_uuid"`
-	Mob        int32  `json:"mob"`
+	Name       string `json:"name"`
 }
 
 func (q *Queries) CountSpecificMobKillsByUuid(ctx context.Context, arg CountSpecificMobKillsByUuidParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countSpecificMobKillsByUuid, arg.PlayerUuid, arg.Mob)
+	row := q.db.QueryRowContext(ctx, countSpecificMobKillsByUuid, arg.PlayerUuid, arg.Name)
 	var count int64
 	err := row.Scan(&count)
 	return count, err

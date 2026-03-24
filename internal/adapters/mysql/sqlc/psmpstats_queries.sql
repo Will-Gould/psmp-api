@@ -88,4 +88,11 @@ FROM
 WHERE
   player_uuid = ?
 AND
-  mob = ?;
+  mob = (
+    SELECT
+      id
+    FROM
+      psmpstats_mobs
+    WHERE
+      name = ?
+  );

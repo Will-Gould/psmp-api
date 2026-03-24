@@ -11,6 +11,7 @@ import (
 
 type Querier interface {
 	CountDeathsByUuid(ctx context.Context, playerUuid string) (int64, error)
+	CountDiamondsMinedByUuid(ctx context.Context, uuid string) (int32, error)
 	CountMobsKilledByUuid(ctx context.Context, playerUuid string) (int64, error)
 	CountPvpKillsByUuid(ctx context.Context, playerUuid string) (int64, error)
 	CountSpecificMobKillsByUuid(ctx context.Context, arg CountSpecificMobKillsByUuidParams) (int64, error)

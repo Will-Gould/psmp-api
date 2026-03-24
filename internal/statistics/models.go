@@ -1,0 +1,157 @@
+package statistics
+
+import repo "github.com/Will-Gould/psmp-api/internal/adapters/mysql/sqlc"
+
+const BLOCK_BROKEN_ACTION = 0
+const BLOCK_PLACED_ACTION = 1
+const PLAYER_JOIN_ACTION = 0
+const PLAYER_LEAVE_ACTION = 1
+
+const ELDER_GUARDIAN = "elder_guardian"
+const ENDER_DRAGON = "ender_dragon"
+const EVOKER = "evoker"
+const PIGLIN_BRUTE = "piglin_brute"
+const WARDEN = "warden"
+const WITHER = "wither"
+
+var BANNED_PLACED_MATERIALS = []string{
+	"short_grass",
+	"tall_grass",
+	"fire",
+	"large_fern",
+	"seagrass",
+	"shulker_box",
+	"allium",
+	"azure_bluet",
+	"red_tulip",
+	"orange_tulip",
+	"white_tulip",
+	"lily_of_the_valley",
+	"wildflowers",
+	"pink_petals",
+	"peony",
+	"rose_bush",
+	"lilac",
+	"moss_carpet",
+	"sculk_vein",
+	"dandelion",
+	"sunflower",
+	"oxeye_daisy",
+	"poppy",
+	"cornflower",
+	"pink_tulip",
+	"blue_orchid",
+	"leaf_litter",
+}
+
+var BANNED_BROKEN_MATERIALS = []string{
+	"netherrack",
+	"short_grass",
+	"tall_grass",
+	"fire",
+	"oak_leaves",
+	"fern",
+	"large_fern",
+	"birch_leaves",
+	"spruce_leaves",
+	"seagrass",
+	"flowering_azalea_leaves",
+	"dark_oak_leaves",
+	"cherry_leaves",
+	"soul_soil",
+	"soul_sand",
+	"jungle_leaves",
+	"azalea_leaves",
+	"mangrove_leaves",
+	"pale_oak_leaves",
+	"dead_bush",
+	"shulker_box",
+	"allium",
+	"azure_bluet",
+	"red_tulip",
+	"orange_tulip",
+	"white_tulip",
+	"lily_of_the_valley",
+	"firefly_bush",
+	"wildflowers",
+	"pink_petals",
+	"wither_rose",
+	"open_eyeblossom",
+	"closed_eyeblossom",
+	"cactus_flower",
+	"bamboo_sapling",
+	"crimson_roots",
+	"warped_roots",
+	"twisting_vines",
+	"large_fern",
+	"hanging_roots",
+	"pitcher_plant",
+	"peony",
+	"rose_bush",
+	"lilac",
+	"moss_carpet",
+	"sculk_vein",
+	"seagrass",
+	"sea_pickle",
+	"tube_coral",
+	"brain_coral",
+	"bubble_coral",
+	"fire_coral",
+	"horn_coral",
+	"dead_tube_coral",
+	"dead_brain_coral",
+	"dead_bubble_coral",
+	"dead_tube_coral_fan",
+	"dead_brain_coral_fan",
+	"horn_coral_fan",
+	"fire_coral_fan",
+	"bubble_coral_fan",
+	"brain_coral_fan",
+	"tube_coral_fan",
+	"dead_horn_coral",
+	"dead_fire_coral",
+	"dead_bubble_coral_fan",
+	"dead_fire_coral_fan",
+	"dead_horn_coral_fan",
+	"pale_hanging_moss",
+	"weeping_vines",
+	"dandelion",
+	"sunflower",
+	"oxeye_daisy",
+	"dead_bush",
+	"poppy",
+	"cornflower",
+	"pink_tulip",
+	"blue_orchid",
+	"torchflower",
+	"bamboo",
+	"vine",
+	"sugar_cane",
+	"kelp",
+	"leaf_litter",
+	"snow",
+}
+
+type Overview struct {
+	Player           Player
+	CraftingOverview CraftingOverview
+	CombatOverview   CombatOverview
+	Score            float64
+	// Advancements     []repo.PsmpstatsPlayerAdvancement
+}
+
+type Player struct {
+	Uuid         string
+	Name         string
+	GlId         int32
+	PrimaryGroup string
+}
+
+type StoryOverview struct {
+	StoryScore float64
+}
+
+type BlockData struct {
+	BlocksBroken []repo.Block
+	BlocksPlaced []repo.Block
+}
