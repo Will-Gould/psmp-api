@@ -26,22 +26,6 @@ func (q *Queries) CountDeathsByUuid(ctx context.Context, playerUuid string) (int
 	return count, err
 }
 
-const countDiamondsMinedByUuid = `-- name: CountDiamondsMinedByUuid :one
-SELECT
-  diamonds_mined
-FROM
-  psmpstats_players
-WHERE
-  uuid = ?
-`
-
-func (q *Queries) CountDiamondsMinedByUuid(ctx context.Context, uuid string) (int32, error) {
-	row := q.db.QueryRowContext(ctx, countDiamondsMinedByUuid, uuid)
-	var diamonds_mined int32
-	err := row.Scan(&diamonds_mined)
-	return diamonds_mined, err
-}
-
 const countMobsKilledByUuid = `-- name: CountMobsKilledByUuid :one
 SELECT
   count(*)
@@ -152,23 +136,41 @@ func (q *Queries) ListAdvancements(ctx context.Context) ([]PsmpstatsAdvancement,
 
 const listAdvancementsByUuid = `-- name: ListAdvancementsByUuid :many
 SELECT
-  player_uuid, time, advancement
+  id, name, player_uuid, time, advancement
 FROM
+  psmpstats_advancements
+LEFT JOIN
   psmpstats_player_advancements
+ON
+  psmpstats_advancements.id = psmpstats_player_advancements.advancement
 WHERE
-  player_uuid = ?
+  psmpstats_player_advancements.player_uuid = ?
 `
 
-func (q *Queries) ListAdvancementsByUuid(ctx context.Context, playerUuid sql.NullString) ([]PsmpstatsPlayerAdvancement, error) {
+type ListAdvancementsByUuidRow struct {
+	ID          uint64         `json:"id"`
+	Name        string         `json:"name"`
+	PlayerUuid  sql.NullString `json:"player_uuid"`
+	Time        sql.NullInt32  `json:"time"`
+	Advancement sql.NullInt32  `json:"advancement"`
+}
+
+func (q *Queries) ListAdvancementsByUuid(ctx context.Context, playerUuid string) ([]ListAdvancementsByUuidRow, error) {
 	rows, err := q.db.QueryContext(ctx, listAdvancementsByUuid, playerUuid)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []PsmpstatsPlayerAdvancement
+	var items []ListAdvancementsByUuidRow
 	for rows.Next() {
-		var i PsmpstatsPlayerAdvancement
-		if err := rows.Scan(&i.PlayerUuid, &i.Time, &i.Advancement); err != nil {
+		var i ListAdvancementsByUuidRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.PlayerUuid,
+			&i.Time,
+			&i.Advancement,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -309,6 +311,38 @@ func (q *Queries) ListMobs(ctx context.Context) ([]PsmpstatsMob, error) {
 	for rows.Next() {
 		var i PsmpstatsMob
 		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPlayerAdvancementsByUuid = `-- name: ListPlayerAdvancementsByUuid :many
+SELECT
+  player_uuid, time, advancement
+FROM
+  psmpstats_player_advancements
+WHERE
+  player_uuid = ?
+`
+
+func (q *Queries) ListPlayerAdvancementsByUuid(ctx context.Context, playerUuid string) ([]PsmpstatsPlayerAdvancement, error) {
+	rows, err := q.db.QueryContext(ctx, listPlayerAdvancementsByUuid, playerUuid)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PsmpstatsPlayerAdvancement
+	for rows.Next() {
+		var i PsmpstatsPlayerAdvancement
+		if err := rows.Scan(&i.PlayerUuid, &i.Time, &i.Advancement); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

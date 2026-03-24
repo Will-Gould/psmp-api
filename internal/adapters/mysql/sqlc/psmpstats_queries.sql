@@ -24,7 +24,7 @@ SELECT
 FROM
   psmpstats_mobs;
 
--- name: ListAdvancementsByUuid :many
+-- name: ListPlayerAdvancementsByUuid :many
 SELECT
   *
 FROM
@@ -96,3 +96,15 @@ AND
     WHERE
       name = ?
   );
+
+-- name: ListAdvancementsByUuid :many
+SELECT
+  *
+FROM
+  psmpstats_advancements
+LEFT JOIN
+  psmpstats_player_advancements
+ON
+  psmpstats_advancements.id = psmpstats_player_advancements.advancement
+WHERE
+  psmpstats_player_advancements.player_uuid = ?

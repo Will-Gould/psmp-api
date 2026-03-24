@@ -19,6 +19,7 @@ type StatisticsHandler struct {
 	BannedBrokenMaterials []int32
 	CauseMapping          []repo.PsmpstatsCause
 	MobMapping            []repo.PsmpstatsMob
+	AdvancementMapping    []repo.PsmpstatsAdvancement
 }
 
 func NewHandler(service Service) *StatisticsHandler {
@@ -60,6 +61,14 @@ func NewHandler(service Service) *StatisticsHandler {
 		log.Panic()
 	}
 
+	// get advancement mapping
+	slog.Log(context.Background(), slog.LevelInfo, "Shearing sheep...")
+	advancementMap, err := service.ListAdvancements(context.Background())
+	if err != nil {
+		slog.Log(context.Background(), slog.LevelError, "Failed to get advancement mapping")
+		log.Panic()
+	}
+
 	return &StatisticsHandler{
 		Service:               service,
 		Materials:             materials,
@@ -67,6 +76,7 @@ func NewHandler(service Service) *StatisticsHandler {
 		BannedBrokenMaterials: bannedBrokenMaterials,
 		CauseMapping:          causeMap,
 		MobMapping:            mobMap,
+		AdvancementMapping:    advancementMap,
 	}
 }
 
@@ -103,8 +113,11 @@ func (sh StatisticsHandler) ShowPlayerOverview(w http.ResponseWriter, r *http.Re
 	// get crafting overview
 	overview.CraftingOverview, err = GetCraftingOverview(r.Context(), sh, playerUuid, glUser)
 
+	// get story overview
+	overview.StoryOverview, err = GetStoryOverview(r.Context(), sh, playerUuid)
+
 	// calculate total score
-	overview.Score = overview.CombatOverview.CombatScore + overview.CraftingOverview.CraftingScore
+	overview.Score = overview.CombatOverview.CombatScore + overview.CraftingOverview.CraftingScore + overview.StoryOverview.StoryScore
 
 	json.Write(w, http.StatusOK, overview)
 }
@@ -168,6 +181,18 @@ func (sh StatisticsHandler) ListDeaths(w http.ResponseWriter, r *http.Request) {
 	json.Write(w, http.StatusOK, deaths)
 }
 
+func (sh StatisticsHandler) ListAdvancements(w http.ResponseWriter, r *http.Request) {
+	playerUuid := chi.URLParam(r, "uuid")
+
+	advancements, err := sh.Service.ListAdvancementsByPlayer(r.Context(), playerUuid)
+	if err != nil {
+		slog.Log(r.Context(), slog.LevelError, "Failed to retrieve advancements")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	json.Write(w, http.StatusOK, advancements)
+}
+
 func (sh StatisticsHandler) GetMappings(w http.ResponseWriter, r *http.Request) {
 
 	maps := struct {
@@ -178,14 +203,4 @@ func (sh StatisticsHandler) GetMappings(w http.ResponseWriter, r *http.Request) 
 		CauseMap: sh.CauseMapping,
 	}
 	json.Write(w, http.StatusOK, maps)
-}
-
-func (sh StatisticsHandler) getMobId(mob string) uint64 {
-	for _, v := range sh.MobMapping {
-		if v.Name == mob {
-			return v.ID
-		}
-	}
-
-	return 0
 }

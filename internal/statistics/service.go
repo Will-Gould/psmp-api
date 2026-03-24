@@ -22,6 +22,8 @@ type Service interface {
 	CountSpecificMobKillsByUuid(ctx context.Context, name string, uuid string) (int64, error)
 	FindPsmpstatsPlayerByUuid(ctx context.Context, uuid string) (repo.PsmpstatsPlayer, error)
 	FindLuckpermsPlayer(ctx context.Context, uuid string) (repo.LuckpermsPlayer, error)
+	ListAdvancementsByPlayer(ctx context.Context, uuid string) ([]repo.PsmpstatsAdvancement, error)
+	ListAdvancements(ctx context.Context) ([]repo.PsmpstatsAdvancement, error)
 }
 
 type svc struct {
@@ -94,4 +96,23 @@ func (s svc) FindPsmpstatsPlayerByUuid(ctx context.Context, uuid string) (repo.P
 
 func (s svc) FindLuckpermsPlayer(ctx context.Context, uuid string) (repo.LuckpermsPlayer, error) {
 	return s.repo.FindLuckpermsPlayerByUuid(ctx, uuid)
+}
+
+func (s svc) ListAdvancements(ctx context.Context) ([]repo.PsmpstatsAdvancement, error) {
+	return s.repo.ListAdvancements(ctx)
+}
+
+func (s svc) ListAdvancementsByPlayer(ctx context.Context, uuid string) ([]repo.PsmpstatsAdvancement, error) {
+	rows, err := s.repo.ListAdvancementsByUuid(ctx, uuid)
+	advancements := []repo.PsmpstatsAdvancement{}
+	if err != nil {
+		return advancements, err
+	}
+	for _, a := range rows {
+		advancements = append(advancements, repo.PsmpstatsAdvancement{
+			ID:   a.ID,
+			Name: a.Name,
+		})
+	}
+	return advancements, nil
 }

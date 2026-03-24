@@ -4,10 +4,6 @@
 
 package repo
 
-import (
-	"database/sql"
-)
-
 type Block struct {
 	Time   int64 `json:"time"`
 	User   int32 `json:"user"`
@@ -81,9 +77,9 @@ type PsmpstatsPlayer struct {
 }
 
 type PsmpstatsPlayerAdvancement struct {
-	PlayerUuid  sql.NullString `json:"player_uuid"`
-	Time        int32          `json:"time"`
-	Advancement int32          `json:"advancement"`
+	PlayerUuid  string `json:"player_uuid"`
+	Time        int32  `json:"time"`
+	Advancement int32  `json:"advancement"`
 }
 
 type Session struct {

@@ -136,6 +136,7 @@ type Overview struct {
 	Player           Player
 	CraftingOverview CraftingOverview
 	CombatOverview   CombatOverview
+	StoryOverview    StoryOverview
 	Score            float64
 	// Advancements     []repo.PsmpstatsPlayerAdvancement
 }
@@ -145,10 +146,6 @@ type Player struct {
 	Name         string
 	GlId         int32
 	PrimaryGroup string
-}
-
-type StoryOverview struct {
-	StoryScore float64
 }
 
 type BlockData struct {
