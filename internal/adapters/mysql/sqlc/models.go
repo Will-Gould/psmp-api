@@ -26,6 +26,62 @@ type Material struct {
 	Name string `json:"name"`
 }
 
+type PsmpstatsAdvancement struct {
+	ID   uint64 `json:"id"`
+	Name string `json:"name"`
+}
+
+type PsmpstatsCause struct {
+	ID   uint64 `json:"id"`
+	Name string `json:"name"`
+}
+
+type PsmpstatsCombat struct {
+	PlayerUuid string `json:"player_uuid"`
+	VictimUuid string `json:"victim_uuid"`
+	Time       int32  `json:"time"`
+	World      string `json:"world"`
+	X          int32  `json:"x"`
+	Y          int32  `json:"y"`
+	Z          int32  `json:"z"`
+}
+
+type PsmpstatsDeath struct {
+	PlayerUuid string `json:"player_uuid"`
+	Time       int32  `json:"time"`
+	World      string `json:"world"`
+	X          int32  `json:"x"`
+	Y          int32  `json:"y"`
+	Z          int32  `json:"z"`
+	Cause      int32  `json:"cause"`
+}
+
+type PsmpstatsMob struct {
+	ID   uint64 `json:"id"`
+	Name string `json:"name"`
+}
+
+type PsmpstatsMobKill struct {
+	PlayerUuid string `json:"player_uuid"`
+	Time       int32  `json:"time"`
+	World      string `json:"world"`
+	X          int32  `json:"x"`
+	Y          int32  `json:"y"`
+	Z          int32  `json:"z"`
+	Mob        int32  `json:"mob"`
+}
+
+type PsmpstatsPlayer struct {
+	Uuid          string `json:"uuid"`
+	DiamondsMined int32  `json:"diamonds_mined"`
+}
+
+type PsmpstatsPlayerAdvancement struct {
+	PlayerUuid  string `json:"player_uuid"`
+	Time        int32  `json:"time"`
+	Advancement int32  `json:"advancement"`
+}
+
 type Session struct {
 	Time   int64 `json:"time"`
 	User   int32 `json:"user"`

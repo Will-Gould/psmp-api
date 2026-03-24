@@ -6,152 +6,20 @@ import (
 	"log/slog"
 	"net/http"
 	"slices"
-	"sort"
 
 	repo "github.com/Will-Gould/psmp-api/internal/adapters/mysql/sqlc"
 	"github.com/Will-Gould/psmp-api/internal/json"
 	"github.com/go-chi/chi"
 )
 
-const BLOCK_BROKEN_ACTION = 0
-const BLOCK_PLACED_ACTION = 1
-const PLAYER_JOIN_ACTION = 0
-const PLAYER_LEAVE_ACTION = 1
-
-var BannedPlacedMaterialsList = []string{
-	"short_grass",
-	"tall_grass",
-	"fire",
-	"large_fern",
-	"seagrass",
-	"shulker_box",
-	"allium",
-	"azure_bluet",
-	"red_tulip",
-	"orange_tulip",
-	"white_tulip",
-	"lily_of_the_valley",
-	"wildflowers",
-	"pink_petals",
-	"peony",
-	"rose_bush",
-	"lilac",
-	"moss_carpet",
-	"sculk_vein",
-	"dandelion",
-	"sunflower",
-	"oxeye_daisy",
-	"poppy",
-	"cornflower",
-	"pink_tulip",
-	"blue_orchid",
-	"leaf_litter",
-}
-
-var BannedBrokenMaterialsList = []string{
-	"netherrack",
-	"short_grass",
-	"tall_grass",
-	"fire",
-	"oak_leaves",
-	"fern",
-	"large_fern",
-	"birch_leaves",
-	"spruce_leaves",
-	"seagrass",
-	"flowering_azalea_leaves",
-	"dark_oak_leaves",
-	"cherry_leaves",
-	"soul_soil",
-	"soul_sand",
-	"jungle_leaves",
-	"azalea_leaves",
-	"mangrove_leaves",
-	"pale_oak_leaves",
-	"dead_bush",
-	"shulker_box",
-	"allium",
-	"azure_bluet",
-	"red_tulip",
-	"orange_tulip",
-	"white_tulip",
-	"lily_of_the_valley",
-	"firefly_bush",
-	"wildflowers",
-	"pink_petals",
-	"wither_rose",
-	"open_eyeblossom",
-	"closed_eyeblossom",
-	"cactus_flower",
-	"bamboo_sapling",
-	"crimson_roots",
-	"warped_roots",
-	"twisting_vines",
-	"large_fern",
-	"hanging_roots",
-	"pitcher_plant",
-	"peony",
-	"rose_bush",
-	"lilac",
-	"moss_carpet",
-	"sculk_vein",
-	"seagrass",
-	"sea_pickle",
-	"tube_coral",
-	"brain_coral",
-	"bubble_coral",
-	"fire_coral",
-	"horn_coral",
-	"dead_tube_coral",
-	"dead_brain_coral",
-	"dead_bubble_coral",
-	"dead_tube_coral_fan",
-	"dead_brain_coral_fan",
-	"horn_coral_fan",
-	"fire_coral_fan",
-	"bubble_coral_fan",
-	"brain_coral_fan",
-	"tube_coral_fan",
-	"dead_horn_coral",
-	"dead_fire_coral",
-	"dead_bubble_coral_fan",
-	"dead_fire_coral_fan",
-	"dead_horn_coral_fan",
-	"pale_hanging_moss",
-	"weeping_vines",
-	"dandelion",
-	"sunflower",
-	"oxeye_daisy",
-	"dead_bush",
-	"poppy",
-	"cornflower",
-	"pink_tulip",
-	"blue_orchid",
-	"torchflower",
-	"bamboo",
-	"vine",
-	"sugar_cane",
-	"kelp",
-	"leaf_litter",
-	"snow",
-}
-
 type StatisticsHandler struct {
 	Service               Service
 	Materials             []repo.Material
 	BannedPlacedMaterials []int32
 	BannedBrokenMaterials []int32
-}
-
-type Overview struct {
-	BlocksBroken int64
-	BlocksPlaced int64
-	TimePlayed   int64
-}
-
-type BlockData struct {
-	BlocksBroken []repo.Block
-	BlocksPlaced []repo.Block
+	CauseMapping          []repo.PsmpstatsCause
+	MobMapping            []repo.PsmpstatsMob
+	AdvancementMapping    []repo.PsmpstatsAdvancement
 }
 
 func NewHandler(service Service) *StatisticsHandler {
@@ -167,14 +35,38 @@ func NewHandler(service Service) *StatisticsHandler {
 	}
 
 	// add banned material IDs
-	slog.Log(context.Background(), slog.LevelInfo, "Killing zombies...")
+	slog.Log(context.Background(), slog.LevelInfo, "Brewing potions...")
 	for _, m := range materials {
-		if slices.Contains(BannedPlacedMaterialsList, m.Name) {
+		if slices.Contains(BANNED_PLACED_MATERIALS, m.Name) {
 			bannedPlacedMaterials = append(bannedPlacedMaterials, m.ID)
 		}
-		if slices.Contains(BannedBrokenMaterialsList, m.Name) {
+		if slices.Contains(BANNED_BROKEN_MATERIALS, m.Name) {
 			bannedBrokenMaterials = append(bannedBrokenMaterials, m.ID)
 		}
+	}
+
+	// get mob mapping
+	slog.Log(context.Background(), slog.LevelInfo, "Killing zombies...")
+	mobMap, err := service.ListMobs(context.Background())
+	if err != nil {
+		slog.Log(context.Background(), slog.LevelError, "Failed to get mob mapping")
+		log.Panic()
+	}
+
+	// get death cause mapping
+	slog.Log(context.Background(), slog.LevelInfo, "Jumping over ravines...")
+	causeMap, err := service.ListCausesOfDeath(context.Background())
+	if err != nil {
+		slog.Log(context.Background(), slog.LevelError, "Failed to get causes of death mapping")
+		log.Panic()
+	}
+
+	// get advancement mapping
+	slog.Log(context.Background(), slog.LevelInfo, "Shearing sheep...")
+	advancementMap, err := service.ListAdvancements(context.Background())
+	if err != nil {
+		slog.Log(context.Background(), slog.LevelError, "Failed to get advancement mapping")
+		log.Panic()
 	}
 
 	return &StatisticsHandler{
@@ -182,6 +74,9 @@ func NewHandler(service Service) *StatisticsHandler {
 		Materials:             materials,
 		BannedPlacedMaterials: bannedPlacedMaterials,
 		BannedBrokenMaterials: bannedBrokenMaterials,
+		CauseMapping:          causeMap,
+		MobMapping:            mobMap,
+		AdvancementMapping:    advancementMap,
 	}
 }
 
@@ -193,17 +88,36 @@ func (sh StatisticsHandler) ShowPlayerOverview(w http.ResponseWriter, r *http.Re
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
-	// count blocks
-	blocksBroken, err := sh.Service.CountBlocksByUser(r.Context(), glUser.ID, BLOCK_BROKEN_ACTION, sh.BannedBrokenMaterials)
-	blocksPlaced, err := sh.Service.CountBlocksByUser(r.Context(), glUser.ID, BLOCK_PLACED_ACTION, sh.BannedPlacedMaterials)
-	overview.BlocksBroken = blocksBroken
-	overview.BlocksPlaced = blocksPlaced
+	lpPlayer, err := sh.Service.FindLuckpermsPlayer(r.Context(), playerUuid)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-	// count time played
-	sessions, err := sh.Service.ListSessionDataByUser(r.Context(), glUser.ID)
-	overview.TimePlayed = countTimePlayed(sessions)
+	player := Player{
+		Uuid:         playerUuid,
+		Name:         glUser.Name,
+		GlId:         glUser.ID,
+		PrimaryGroup: lpPlayer.PrimaryGroup,
+	}
+
+	overview.Player = player
+
+	// get combat overview
+	overview.CombatOverview, err = GetCombatOverview(r.Context(), sh, playerUuid)
+
+	// get crafting overview
+	overview.CraftingOverview, err = GetCraftingOverview(r.Context(), sh, playerUuid, glUser)
+
+	// get story overview
+	overview.StoryOverview, err = GetStoryOverview(r.Context(), sh, playerUuid)
+
+	// calculate total score
+	overview.Score = overview.CombatOverview.CombatScore + overview.CraftingOverview.CraftingScore + overview.StoryOverview.StoryScore
 
 	json.Write(w, http.StatusOK, overview)
 }
@@ -255,28 +169,38 @@ func (sh StatisticsHandler) ListSessionData(w http.ResponseWriter, r *http.Reque
 	json.Write(w, http.StatusOK, sessions)
 }
 
-func countTimePlayed(sessions []repo.Session) int64 {
-	// check if there are no sessions
-	if len(sessions) < 1 {
-		return 0
+func (sh StatisticsHandler) ListDeaths(w http.ResponseWriter, r *http.Request) {
+	playerUuid := chi.URLParam(r, "uuid")
+
+	deaths, err := sh.Service.ListDeathsByPlayer(r.Context(), playerUuid)
+	if err != nil {
+		slog.Log(r.Context(), slog.LevelError, "Failed to retrieve deaths")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
-	// make sure slice is in chronological order
-	sort.Slice(sessions, func(i, j int) bool {
-		if sessions[i].Time < sessions[j].Time {
-			return true
-		}
-		return false
-	})
+	json.Write(w, http.StatusOK, deaths)
+}
 
-	var timePlayed int64
-	var lastSession = sessions[0]
-	for _, s := range sessions {
-		if lastSession.Action == PLAYER_JOIN_ACTION && s.Action == PLAYER_LEAVE_ACTION {
-			timePlayed += (s.Time - lastSession.Time)
-		}
-		lastSession = s
+func (sh StatisticsHandler) ListAdvancements(w http.ResponseWriter, r *http.Request) {
+	playerUuid := chi.URLParam(r, "uuid")
+
+	advancements, err := sh.Service.ListAdvancementsByPlayer(r.Context(), playerUuid)
+	if err != nil {
+		slog.Log(r.Context(), slog.LevelError, "Failed to retrieve advancements")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
-	return timePlayed / 1000
+	json.Write(w, http.StatusOK, advancements)
+}
+
+func (sh StatisticsHandler) GetMappings(w http.ResponseWriter, r *http.Request) {
+
+	maps := struct {
+		MobMap   []repo.PsmpstatsMob
+		CauseMap []repo.PsmpstatsCause
+	}{
+		MobMap:   sh.MobMapping,
+		CauseMap: sh.CauseMapping,
+	}
+	json.Write(w, http.StatusOK, maps)
 }

@@ -44,9 +44,12 @@ func (app application) mount() http.Handler {
 	// Start statistics service & handler
 	statisticsService := statistics.NewService(repo)
 	statisticsHandler := statistics.NewHandler(statisticsService)
+	r.Get("/statistics/mappings", statisticsHandler.GetMappings)
 	r.Get("/statistics/{uuid}", statisticsHandler.ShowPlayerOverview)
 	r.Get("/statistics/{uuid}/block-data", statisticsHandler.ListBlockData)
 	r.Get("/statistics/{uuid}/sessions", statisticsHandler.ListSessionData)
+	r.Get("/statistics/{uuid}/deaths", statisticsHandler.ListDeaths)
+	r.Get("/statistics/{uuid}/advancements", statisticsHandler.ListAdvancements)
 
 	return r
 }
@@ -61,7 +64,7 @@ func (app application) run(h http.Handler) error {
 		IdleTimeout:  time.Minute,
 	}
 
-	message := "Server has started on port " + app.config.addr
+	message := "Server has started on port" + app.config.addr
 	slog.Info(message)
 
 	return srv.ListenAndServe()

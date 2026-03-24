@@ -1,7 +1,9 @@
 version: "2"
 sql:
   - engine: "mysql"
-    queries: "./internal/adapters/mysql/sqlc/queries.sql"
+    queries: 
+      - "./internal/adapters/mysql/sqlc/queries.sql"
+      - "./internal/adapters/mysql/sqlc/psmpstats_queries.sql"
     schema: "./internal/adapters/mysql/migrations"
     gen:
       go:

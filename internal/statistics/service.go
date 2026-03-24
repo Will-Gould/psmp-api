@@ -13,6 +13,17 @@ type Service interface {
 	ListBlocksBrokenByUser(ctx context.Context, id int32) ([]repo.Block, error)
 	ListBlocksPlacedByUser(ctx context.Context, id int32) ([]repo.Block, error)
 	ListSessionDataByUser(ctx context.Context, id int32) ([]repo.Session, error)
+	ListDeathsByPlayer(ctx context.Context, uuid string) ([]repo.PsmpstatsDeath, error)
+	CountDeathsByPlayer(ctx context.Context, uuid string) (int64, error)
+	CountPvpKillsByPlayer(ctx context.Context, uuid string) (int64, error)
+	CountMobKillsByPlayer(ctx context.Context, uuid string) (int64, error)
+	ListMobs(ctx context.Context) ([]repo.PsmpstatsMob, error)
+	ListCausesOfDeath(ctx context.Context) ([]repo.PsmpstatsCause, error)
+	CountSpecificMobKillsByUuid(ctx context.Context, name string, uuid string) (int64, error)
+	FindPsmpstatsPlayerByUuid(ctx context.Context, uuid string) (repo.PsmpstatsPlayer, error)
+	FindLuckpermsPlayer(ctx context.Context, uuid string) (repo.LuckpermsPlayer, error)
+	ListAdvancementsByPlayer(ctx context.Context, uuid string) ([]repo.PsmpstatsAdvancement, error)
+	ListAdvancements(ctx context.Context) ([]repo.PsmpstatsAdvancement, error)
 }
 
 type svc struct {
@@ -45,4 +56,63 @@ func (s svc) CountBlocksByUser(ctx context.Context, id int32, action int32, bann
 
 func (s svc) ListSessionDataByUser(ctx context.Context, id int32) ([]repo.Session, error) {
 	return s.repo.ListSessionDataByUser(ctx, id)
+}
+
+func (s svc) ListDeathsByPlayer(ctx context.Context, uuid string) ([]repo.PsmpstatsDeath, error) {
+	return s.repo.ListDeathsByUuid(ctx, uuid)
+}
+
+func (s svc) CountDeathsByPlayer(ctx context.Context, uuid string) (int64, error) {
+	return s.repo.CountDeathsByUuid(ctx, uuid)
+}
+
+func (s svc) CountPvpKillsByPlayer(ctx context.Context, uuid string) (int64, error) {
+	return s.repo.CountPvpKillsByUuid(ctx, uuid)
+}
+
+func (s svc) CountMobKillsByPlayer(ctx context.Context, uuid string) (int64, error) {
+	return s.repo.CountMobsKilledByUuid(ctx, uuid)
+}
+
+func (s svc) ListMobs(ctx context.Context) ([]repo.PsmpstatsMob, error) {
+	return s.repo.ListMobs(ctx)
+}
+
+func (s svc) ListCausesOfDeath(ctx context.Context) ([]repo.PsmpstatsCause, error) {
+	return s.repo.ListCausesOfDeath(ctx)
+}
+
+func (s svc) CountSpecificMobKillsByUuid(ctx context.Context, name string, uuid string) (int64, error) {
+	return s.repo.CountSpecificMobKillsByUuid(ctx,
+		repo.CountSpecificMobKillsByUuidParams{
+			PlayerUuid: uuid,
+			Name:       name,
+		})
+}
+
+func (s svc) FindPsmpstatsPlayerByUuid(ctx context.Context, uuid string) (repo.PsmpstatsPlayer, error) {
+	return s.repo.FindPsmpstatsPlayerByUuid(ctx, uuid)
+}
+
+func (s svc) FindLuckpermsPlayer(ctx context.Context, uuid string) (repo.LuckpermsPlayer, error) {
+	return s.repo.FindLuckpermsPlayerByUuid(ctx, uuid)
+}
+
+func (s svc) ListAdvancements(ctx context.Context) ([]repo.PsmpstatsAdvancement, error) {
+	return s.repo.ListAdvancements(ctx)
+}
+
+func (s svc) ListAdvancementsByPlayer(ctx context.Context, uuid string) ([]repo.PsmpstatsAdvancement, error) {
+	rows, err := s.repo.ListAdvancementsByUuid(ctx, uuid)
+	advancements := []repo.PsmpstatsAdvancement{}
+	if err != nil {
+		return advancements, err
+	}
+	for _, a := range rows {
+		advancements = append(advancements, repo.PsmpstatsAdvancement{
+			ID:   a.ID,
+			Name: a.Name,
+		})
+	}
+	return advancements, nil
 }
