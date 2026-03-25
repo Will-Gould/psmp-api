@@ -2,6 +2,7 @@ package statistics
 
 import (
 	"context"
+	"errors"
 	"log"
 	"log/slog"
 	"net/http"
@@ -105,19 +106,11 @@ func (sh StatisticsHandler) ShowPlayerOverview(w http.ResponseWriter, r *http.Re
 		PrimaryGroup: lpPlayer.PrimaryGroup,
 	}
 
-	overview.Player = player
-
-	// get combat overview
-	overview.CombatOverview, err = GetCombatOverview(r.Context(), sh, playerUuid)
-
-	// get crafting overview
-	overview.CraftingOverview, err = GetCraftingOverview(r.Context(), sh, playerUuid, glUser)
-
-	// get story overview
-	overview.StoryOverview, err = GetStoryOverview(r.Context(), sh, playerUuid)
-
-	// calculate total score
-	overview.Score = overview.CombatOverview.CombatScore + overview.CraftingOverview.CraftingScore + overview.StoryOverview.StoryScore
+	// get overview
+	overview, err = sh.getOverview(r.Context(), player)
+	if err != nil {
+		slog.Log(r.Context(), slog.LevelError, err.Error())
+	}
 
 	json.Write(w, http.StatusOK, overview)
 }
@@ -191,6 +184,99 @@ func (sh StatisticsHandler) ListAdvancements(w http.ResponseWriter, r *http.Requ
 	}
 
 	json.Write(w, http.StatusOK, advancements)
+}
+
+func (sh StatisticsHandler) ListPlayers(w http.ResponseWriter, r *http.Request) {
+	players, err := sh.getPlayers(r.Context())
+	if err != nil {
+		slog.Log(r.Context(), slog.LevelError, "Failed to retrieve player overviews")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.Write(w, http.StatusOK, players)
+}
+
+func (sh StatisticsHandler) ListFeaturedPlayers(w http.ResponseWriter, r *http.Request) {
+	featuredPlayers := FeaturedPlayers{}
+	players, err := sh.getPlayers(r.Context())
+	if err != nil {
+		slog.Log(r.Context(), slog.LevelError, "Failed to retrieve player overviews")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	featuredPlayers.ChampionPlayer = GetChampionPlayer(sh, r.Context(), players)
+	featuredPlayers.BiggestBuilder = GetBiggestBuilder(sh, r.Context(), players)
+	featuredPlayers.MostDangerousPlayer = GetMostDangerousPlayer(sh, r.Context(), players)
+
+	json.Write(w, http.StatusOK, featuredPlayers)
+}
+
+func (sh StatisticsHandler) getOverview(ctx context.Context, player Player) (Overview, error) {
+	overview := Overview{}
+	overview.Player = player
+
+	// get combat overview
+	combatOverview, err := GetCombatOverview(ctx, sh, player.Uuid)
+	if err != nil {
+		slog.Log(ctx, slog.LevelError, err.Error())
+		return overview, errors.New("Failed to get combat overview for player: " + player.Uuid)
+	}
+
+	// get crafting overview
+	craftingOverview, err := GetCraftingOverview(ctx, sh, player.Uuid, player.GlId)
+	if err != nil {
+		slog.Log(ctx, slog.LevelError, err.Error())
+		return overview, errors.New("Failed to get crafting overview for player: " + player.Uuid)
+	}
+
+	// get story overview
+	storyOverview, err := GetStoryOverview(ctx, sh, player.Uuid)
+	if err != nil {
+		slog.Log(ctx, slog.LevelError, err.Error())
+		return overview, errors.New("Failed to get story overview for player: " + player.Uuid)
+	}
+
+	overview.CombatOverview = combatOverview
+	overview.CraftingOverview = craftingOverview
+	overview.StoryOverview = storyOverview
+
+	// calculate total score
+	overview.Score = overview.CombatOverview.CombatScore + overview.CraftingOverview.CraftingScore + overview.StoryOverview.StoryScore
+
+	return overview, nil
+}
+
+func (sh StatisticsHandler) getPlayers(ctx context.Context) ([]Overview, error) {
+	var players []Overview
+
+	luckpermsPlayers, err := sh.Service.ListLuckpermsPlayers(ctx)
+	if err != nil {
+		slog.Log(ctx, slog.LevelError, "Failed to retrieve Luckperms players")
+		return players, errors.New("Failed to retrieve Luckperms players")
+	}
+
+	// build overviews
+	for _, p := range luckpermsPlayers {
+		glUser, err := sh.Service.FindGriefLoggerUser(ctx, p.Uuid)
+		if err != nil {
+			continue
+		}
+		player := Player{
+			Uuid:         p.Uuid,
+			Name:         glUser.Name,
+			GlId:         glUser.ID,
+			PrimaryGroup: p.PrimaryGroup,
+		}
+		overview, err := sh.getOverview(ctx, player)
+		if err != nil {
+			continue
+		}
+		players = append(players, overview)
+	}
+
+	return players, nil
 }
 
 func (sh StatisticsHandler) GetMappings(w http.ResponseWriter, r *http.Request) {

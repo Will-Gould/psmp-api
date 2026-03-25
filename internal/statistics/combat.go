@@ -16,6 +16,11 @@ type CombatOverview struct {
 	WithersKilled        int64
 }
 
+type SingleDailyChartData struct {
+	Date  string
+	Value int64
+}
+
 func GetCombatOverview(ctx context.Context, sh StatisticsHandler, uuid string) (CombatOverview, error) {
 	// count deaths
 	deaths, err := sh.Service.CountDeathsByPlayer(ctx, uuid)

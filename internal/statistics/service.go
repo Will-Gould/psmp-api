@@ -24,6 +24,8 @@ type Service interface {
 	FindLuckpermsPlayer(ctx context.Context, uuid string) (repo.LuckpermsPlayer, error)
 	ListAdvancementsByPlayer(ctx context.Context, uuid string) ([]repo.PsmpstatsAdvancement, error)
 	ListAdvancements(ctx context.Context) ([]repo.PsmpstatsAdvancement, error)
+	ListLuckpermsPlayers(ctx context.Context) ([]repo.LuckpermsPlayer, error)
+	ListMobKillsByUuid(ctx context.Context, uuid string) ([]repo.PsmpstatsMobKill, error)
 }
 
 type svc struct {
@@ -108,6 +110,7 @@ func (s svc) ListAdvancementsByPlayer(ctx context.Context, uuid string) ([]repo.
 	if err != nil {
 		return advancements, err
 	}
+	// map result to PsmpstatsAdvancement struct
 	for _, a := range rows {
 		advancements = append(advancements, repo.PsmpstatsAdvancement{
 			ID:   a.ID,
@@ -115,4 +118,12 @@ func (s svc) ListAdvancementsByPlayer(ctx context.Context, uuid string) ([]repo.
 		})
 	}
 	return advancements, nil
+}
+
+func (s svc) ListLuckpermsPlayers(ctx context.Context) ([]repo.LuckpermsPlayer, error) {
+	return s.repo.ListLuckpermsPlayers(ctx)
+}
+
+func (s svc) ListMobKillsByUuid(ctx context.Context, uuid string) ([]repo.PsmpstatsMobKill, error) {
+	return s.repo.ListMobKillsByUuid(ctx, uuid)
 }

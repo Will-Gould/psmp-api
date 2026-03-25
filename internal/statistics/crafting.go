@@ -15,20 +15,20 @@ type CraftingOverview struct {
 	TimePlayed    int64
 }
 
-func GetCraftingOverview(ctx context.Context, sh StatisticsHandler, uuid string, glUser repo.User) (CraftingOverview, error) {
+func GetCraftingOverview(ctx context.Context, sh StatisticsHandler, uuid string, glId int32) (CraftingOverview, error) {
 	// count blocks
-	blocksBroken, err := sh.Service.CountBlocksByUser(ctx, glUser.ID, BLOCK_BROKEN_ACTION, sh.BannedBrokenMaterials)
+	blocksBroken, err := sh.Service.CountBlocksByUser(ctx, glId, BLOCK_BROKEN_ACTION, sh.BannedBrokenMaterials)
 	if err != nil {
 		blocksBroken = 0
 	}
-	blocksPlaced, err := sh.Service.CountBlocksByUser(ctx, glUser.ID, BLOCK_PLACED_ACTION, sh.BannedPlacedMaterials)
+	blocksPlaced, err := sh.Service.CountBlocksByUser(ctx, glId, BLOCK_PLACED_ACTION, sh.BannedPlacedMaterials)
 	if err != nil {
 		blocksPlaced = 0
 	}
 
 	// count time played
 	var timePlayed int64
-	sessions, err := sh.Service.ListSessionDataByUser(ctx, glUser.ID)
+	sessions, err := sh.Service.ListSessionDataByUser(ctx, glId)
 	if err != nil {
 		timePlayed = 0
 	} else {
