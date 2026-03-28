@@ -1,6 +1,14 @@
 package statistics
 
-import "context"
+import (
+	"context"
+	"log/slog"
+	"time"
+
+	repo "github.com/Will-Gould/psmp-api/internal/adapters/mysql/sqlc"
+)
+
+const DATE_FORMAT = "2006-01-02"
 
 type CombatOverview struct {
 	CombatScore          float64
@@ -104,6 +112,39 @@ func GetCombatOverview(ctx context.Context, sh StatisticsHandler, uuid string) (
 	}
 
 	return combatOverview, nil
+}
+
+func GetMobKillChartData(ctx context.Context, sh StatisticsHandler, uuid string) []SingleDailyChartData {
+	chartData := []SingleDailyChartData{}
+	mobKills, err := sh.Service.ListMobKillsByUuid(ctx, uuid)
+	if err != nil {
+		slog.Log(ctx, slog.LevelError, err.Error())
+		return chartData
+	}
+
+	for _, m := range mobKills {
+		insertMobKill(&chartData, m)
+	}
+
+	return chartData
+
+}
+
+func insertMobKill(cd *[]SingleDailyChartData, m repo.PsmpstatsMobKill) {
+	t := time.Unix(int64(m.Time), 0)
+	for i, d := range *cd {
+		if d.Date == t.Local().Format(DATE_FORMAT) {
+			(*cd)[i].Value += 1
+			return
+		}
+	}
+
+	// insert new data point for new date
+	d := SingleDailyChartData{
+		Date:  t.Local().Format(DATE_FORMAT),
+		Value: 1,
+	}
+	*cd = append(*cd, d)
 }
 
 func calculateCombatScore(

@@ -213,6 +213,13 @@ func (sh StatisticsHandler) ListFeaturedPlayers(w http.ResponseWriter, r *http.R
 	json.Write(w, http.StatusOK, featuredPlayers)
 }
 
+func (sh StatisticsHandler) ListMobKillChartData(w http.ResponseWriter, r *http.Request) {
+	playerUuid := chi.URLParam(r, "uuid")
+	mobKillData := GetMobKillChartData(r.Context(), sh, playerUuid)
+
+	json.Write(w, http.StatusOK, mobKillData)
+}
+
 func (sh StatisticsHandler) getOverview(ctx context.Context, player Player) (Overview, error) {
 	overview := Overview{}
 	overview.Player = player

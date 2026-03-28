@@ -55,6 +55,8 @@ func (app application) mount() http.Handler {
 	r.Get("/api/statistics/{uuid}/deaths", statisticsHandler.ListDeaths)
 	r.Get("/api/statistics/{uuid}/advancements", statisticsHandler.ListAdvancements)
 
+	r.Get("/api/statistics/{uuid}/mob-kill-chart-data", statisticsHandler.ListMobKillChartData)
+
 	return r
 }
 
