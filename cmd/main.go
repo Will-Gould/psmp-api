@@ -53,7 +53,7 @@ func main() {
 	}
 
 	if err := api.run(api.mount()); err != nil {
-		slog.Error("Server failed to start, err: %s", err)
+		slog.Log(context.Background(), slog.LevelError, "Server failed to start")
 		os.Exit(1)
 	}
 
