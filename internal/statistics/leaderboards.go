@@ -5,7 +5,7 @@ import (
 	"sort"
 )
 
-type LeaderboardPlayer struct {
+type LeaderboardRanks struct {
 	ServerRank        int64
 	CraftingRank      int64
 	CombatRank        int64
@@ -16,15 +16,15 @@ type LeaderboardPlayer struct {
 	DiamondsMinedRank int64
 }
 
-func (sh StatisticsHandler) UpdateLeaderboard(ctx context.Context) (map[string]LeaderboardPlayer, error) {
-	leaderboard := make(map[string]LeaderboardPlayer)
+func (sh StatisticsHandler) UpdateLeaderboard(ctx context.Context) (map[string]LeaderboardRanks, error) {
+	leaderboard := make(map[string]LeaderboardRanks)
 	players, err := sh.getPlayers(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, p := range players {
-		leaderboard[p.Player.Uuid] = LeaderboardPlayer{}
+		leaderboard[p.Player.Uuid] = LeaderboardRanks{}
 	}
 
 	getServerRanks(players, &leaderboard)
@@ -39,7 +39,7 @@ func (sh StatisticsHandler) UpdateLeaderboard(ctx context.Context) (map[string]L
 	return leaderboard, nil
 }
 
-func getServerRanks(players []Overview, l *map[string]LeaderboardPlayer) {
+func getServerRanks(players []Overview, l *map[string]LeaderboardRanks) {
 	// sort by total score
 	sort.Slice(players, func(i, j int) bool {
 		if players[i].Score < players[j].Score {
@@ -55,7 +55,7 @@ func getServerRanks(players []Overview, l *map[string]LeaderboardPlayer) {
 	}
 }
 
-func getCombatRanks(players []Overview, l *map[string]LeaderboardPlayer) {
+func getCombatRanks(players []Overview, l *map[string]LeaderboardRanks) {
 	sort.Slice(players, func(i, j int) bool {
 		if players[i].CombatOverview.CombatScore < players[j].CombatOverview.CombatScore {
 			return true
@@ -70,7 +70,7 @@ func getCombatRanks(players []Overview, l *map[string]LeaderboardPlayer) {
 	}
 }
 
-func getDiamondsMinedRanks(players []Overview, l *map[string]LeaderboardPlayer) {
+func getDiamondsMinedRanks(players []Overview, l *map[string]LeaderboardRanks) {
 	sort.Slice(players, func(i, j int) bool {
 		if players[i].CraftingOverview.DiamondsMined < players[j].CraftingOverview.DiamondsMined {
 			return true
@@ -85,7 +85,7 @@ func getDiamondsMinedRanks(players []Overview, l *map[string]LeaderboardPlayer) 
 	}
 }
 
-func getBlocksBrokenRanks(players []Overview, l *map[string]LeaderboardPlayer) {
+func getBlocksBrokenRanks(players []Overview, l *map[string]LeaderboardRanks) {
 	sort.Slice(players, func(i, j int) bool {
 		if players[i].CraftingOverview.BlocksBroken < players[j].CraftingOverview.BlocksBroken {
 			return true
@@ -100,7 +100,7 @@ func getBlocksBrokenRanks(players []Overview, l *map[string]LeaderboardPlayer) {
 	}
 }
 
-func getBlocksPlacedRanks(players []Overview, l *map[string]LeaderboardPlayer) {
+func getBlocksPlacedRanks(players []Overview, l *map[string]LeaderboardRanks) {
 	sort.Slice(players, func(i, j int) bool {
 		if players[i].CraftingOverview.BlocksPlaced < players[j].CraftingOverview.BlocksPlaced {
 			return true
@@ -115,7 +115,7 @@ func getBlocksPlacedRanks(players []Overview, l *map[string]LeaderboardPlayer) {
 	}
 }
 
-func getMobKillRanks(players []Overview, l *map[string]LeaderboardPlayer) {
+func getMobKillRanks(players []Overview, l *map[string]LeaderboardRanks) {
 	sort.Slice(players, func(i, j int) bool {
 		if players[i].CombatOverview.MobsKilled < players[j].CombatOverview.MobsKilled {
 			return true
@@ -130,7 +130,7 @@ func getMobKillRanks(players []Overview, l *map[string]LeaderboardPlayer) {
 	}
 }
 
-func getPvpKillRanks(players []Overview, l *map[string]LeaderboardPlayer) {
+func getPvpKillRanks(players []Overview, l *map[string]LeaderboardRanks) {
 	sort.Slice(players, func(i, j int) bool {
 		if players[i].CombatOverview.PvpKills < players[j].CombatOverview.PvpKills {
 			return true
@@ -145,7 +145,7 @@ func getPvpKillRanks(players []Overview, l *map[string]LeaderboardPlayer) {
 	}
 }
 
-func getCraftingRanks(players []Overview, l *map[string]LeaderboardPlayer) {
+func getCraftingRanks(players []Overview, l *map[string]LeaderboardRanks) {
 	sort.Slice(players, func(i, j int) bool {
 		if players[i].CraftingOverview.CraftingScore < players[j].CraftingOverview.CraftingScore {
 			return true

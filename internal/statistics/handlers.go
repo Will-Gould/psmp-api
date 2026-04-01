@@ -15,7 +15,7 @@ import (
 
 type StatisticsHandler struct {
 	Service               Service
-	Leaderboard           map[string]LeaderboardPlayer
+	Leaderboard           map[string]LeaderboardRanks
 	Materials             []repo.Material
 	BannedPlacedMaterials []int32
 	BannedBrokenMaterials []int32

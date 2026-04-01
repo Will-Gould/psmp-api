@@ -134,6 +134,7 @@ var BANNED_BROKEN_MATERIALS = []string{
 
 type Overview struct {
 	Player           Player
+	LeaderboardRanks LeaderboardRanks
 	CraftingOverview CraftingOverview
 	CombatOverview   CombatOverview
 	StoryOverview    StoryOverview
