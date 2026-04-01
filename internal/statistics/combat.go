@@ -29,7 +29,7 @@ type SingleDailyChartData struct {
 	Value int64
 }
 
-func GetCombatOverview(ctx context.Context, sh StatisticsHandler, uuid string) (CombatOverview, error) {
+func (sh StatisticsHandler) GetCombatOverview(ctx context.Context, uuid string) (CombatOverview, error) {
 	// count deaths
 	deaths, err := sh.Service.CountDeathsByPlayer(ctx, uuid)
 	if err != nil {

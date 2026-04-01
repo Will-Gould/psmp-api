@@ -15,6 +15,7 @@ import (
 
 type StatisticsHandler struct {
 	Service               Service
+	Leaderboard           map[string]LeaderboardPlayer
 	Materials             []repo.Material
 	BannedPlacedMaterials []int32
 	BannedBrokenMaterials []int32
@@ -81,6 +82,14 @@ func NewHandler(service Service) *StatisticsHandler {
 	}
 }
 
+func (sh StatisticsHandler) InitialiseLeaderboard() {
+	l, err := sh.UpdateLeaderboard(context.Background())
+	if err != nil {
+		panic("Failed to initialise leaderboard!")
+	}
+	sh.Leaderboard = l
+}
+
 func (sh StatisticsHandler) ShowPlayerOverview(w http.ResponseWriter, r *http.Request) {
 	playerUuid := chi.URLParam(r, "uuid")
 	overview := Overview{}
@@ -107,7 +116,7 @@ func (sh StatisticsHandler) ShowPlayerOverview(w http.ResponseWriter, r *http.Re
 	}
 
 	// get overview
-	overview, err = sh.getOverview(r.Context(), player)
+	overview, err = sh.GetOverview(r.Context(), player)
 	if err != nil {
 		slog.Log(r.Context(), slog.LevelError, err.Error())
 	}
@@ -220,19 +229,19 @@ func (sh StatisticsHandler) ListMobKillChartData(w http.ResponseWriter, r *http.
 	json.Write(w, http.StatusOK, mobKillData)
 }
 
-func (sh StatisticsHandler) getOverview(ctx context.Context, player Player) (Overview, error) {
+func (sh StatisticsHandler) GetOverview(ctx context.Context, player Player) (Overview, error) {
 	overview := Overview{}
 	overview.Player = player
 
 	// get combat overview
-	combatOverview, err := GetCombatOverview(ctx, sh, player.Uuid)
+	combatOverview, err := sh.GetCombatOverview(ctx, player.Uuid)
 	if err != nil {
 		slog.Log(ctx, slog.LevelError, err.Error())
 		return overview, errors.New("Failed to get combat overview for player: " + player.Uuid)
 	}
 
 	// get crafting overview
-	craftingOverview, err := GetCraftingOverview(ctx, sh, player.Uuid, player.GlId)
+	craftingOverview, err := sh.GetCraftingOverview(ctx, player.Uuid, player.GlId)
 	if err != nil {
 		slog.Log(ctx, slog.LevelError, err.Error())
 		return overview, errors.New("Failed to get crafting overview for player: " + player.Uuid)
@@ -276,7 +285,7 @@ func (sh StatisticsHandler) getPlayers(ctx context.Context) ([]Overview, error) 
 			GlId:         glUser.ID,
 			PrimaryGroup: p.PrimaryGroup,
 		}
-		overview, err := sh.getOverview(ctx, player)
+		overview, err := sh.GetOverview(ctx, player)
 		if err != nil {
 			continue
 		}

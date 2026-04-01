@@ -44,6 +44,7 @@ func (app application) mount() http.Handler {
 	// Start statistics service & handler
 	statisticsService := statistics.NewService(repo)
 	statisticsHandler := statistics.NewHandler(statisticsService)
+	statisticsHandler.InitialiseLeaderboard()
 	r.Get("/api/statistics/mappings", statisticsHandler.GetMappings)
 	r.Get("/api/statistics/players", statisticsHandler.ListPlayers)
 

@@ -15,7 +15,7 @@ type CraftingOverview struct {
 	TimePlayed    int64
 }
 
-func GetCraftingOverview(ctx context.Context, sh StatisticsHandler, uuid string, glId int32) (CraftingOverview, error) {
+func (sh StatisticsHandler) GetCraftingOverview(ctx context.Context, uuid string, glId int32) (CraftingOverview, error) {
 	// count blocks
 	blocksBroken, err := sh.Service.CountBlocksByUser(ctx, glId, BLOCK_BROKEN_ACTION, sh.BannedBrokenMaterials)
 	if err != nil {
