@@ -1,4 +1,4 @@
-package statistics
+package leaderboards
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 )
 
 type Service interface {
-	ListMaterials(ctx context.Context) ([]repo.Material, error)
 	FindGriefLoggerUser(ctx context.Context, uuid string) (repo.User, error)
 	CountBlocksByUser(ctx context.Context, id int32, action int32, banned []int32) (int64, error)
 	ListBlocksBrokenByUser(ctx context.Context, id int32) ([]repo.Block, error)
@@ -17,13 +16,10 @@ type Service interface {
 	CountDeathsByPlayer(ctx context.Context, uuid string) (int64, error)
 	CountPvpKillsByPlayer(ctx context.Context, uuid string) (int64, error)
 	CountMobKillsByPlayer(ctx context.Context, uuid string) (int64, error)
-	ListMobs(ctx context.Context) ([]repo.PsmpstatsMob, error)
-	ListCausesOfDeath(ctx context.Context) ([]repo.PsmpstatsCause, error)
 	CountSpecificMobKillsByUuid(ctx context.Context, name string, uuid string) (int64, error)
 	FindPsmpstatsPlayerByUuid(ctx context.Context, uuid string) (repo.PsmpstatsPlayer, error)
 	FindLuckpermsPlayer(ctx context.Context, uuid string) (repo.LuckpermsPlayer, error)
 	ListAdvancementsByPlayer(ctx context.Context, uuid string) ([]repo.PsmpstatsAdvancement, error)
-	ListAdvancements(ctx context.Context) ([]repo.PsmpstatsAdvancement, error)
 	ListLuckpermsPlayers(ctx context.Context) ([]repo.LuckpermsPlayer, error)
 	ListMobKillsByUuid(ctx context.Context, uuid string) ([]repo.PsmpstatsMobKill, error)
 }
@@ -34,10 +30,6 @@ type svc struct {
 
 func NewService(repo repo.Querier) Service {
 	return &svc{repo: repo}
-}
-
-func (s svc) ListMaterials(ctx context.Context) ([]repo.Material, error) {
-	return s.repo.ListMaterials(ctx)
 }
 
 func (s svc) FindGriefLoggerUser(ctx context.Context, uuid string) (repo.User, error) {
@@ -76,14 +68,6 @@ func (s svc) CountMobKillsByPlayer(ctx context.Context, uuid string) (int64, err
 	return s.repo.CountMobsKilledByUuid(ctx, uuid)
 }
 
-func (s svc) ListMobs(ctx context.Context) ([]repo.PsmpstatsMob, error) {
-	return s.repo.ListMobs(ctx)
-}
-
-func (s svc) ListCausesOfDeath(ctx context.Context) ([]repo.PsmpstatsCause, error) {
-	return s.repo.ListCausesOfDeath(ctx)
-}
-
 func (s svc) CountSpecificMobKillsByUuid(ctx context.Context, name string, uuid string) (int64, error) {
 	return s.repo.CountSpecificMobKillsByUuid(ctx,
 		repo.CountSpecificMobKillsByUuidParams{
@@ -98,10 +82,6 @@ func (s svc) FindPsmpstatsPlayerByUuid(ctx context.Context, uuid string) (repo.P
 
 func (s svc) FindLuckpermsPlayer(ctx context.Context, uuid string) (repo.LuckpermsPlayer, error) {
 	return s.repo.FindLuckpermsPlayerByUuid(ctx, uuid)
-}
-
-func (s svc) ListAdvancements(ctx context.Context) ([]repo.PsmpstatsAdvancement, error) {
-	return s.repo.ListAdvancements(ctx)
 }
 
 func (s svc) ListAdvancementsByPlayer(ctx context.Context, uuid string) ([]repo.PsmpstatsAdvancement, error) {

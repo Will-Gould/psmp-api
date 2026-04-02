@@ -1,14 +1,15 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"log/slog"
 	"net/http"
 	"time"
 
 	repo "github.com/Will-Gould/psmp-api/internal/adapters/mysql/sqlc"
-	"github.com/Will-Gould/psmp-api/internal/players"
-	"github.com/Will-Gould/psmp-api/internal/statistics"
+	"github.com/Will-Gould/psmp-api/internal/leaderboards"
+	"github.com/Will-Gould/psmp-api/internal/mapping"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 )
@@ -36,27 +37,37 @@ func (app application) mount() http.Handler {
 	repo := repo.New(app.db)
 
 	// Start player service & handler
-	playerService := players.NewService(repo)
-	playerHandler := players.NewHandler(playerService)
-	r.Get("/players", playerHandler.ListPlayersHandler)
-	r.Get("/players/{uuid}", playerHandler.ListPlayer)
+	// playerService := players.NewService(repo)
+	// playerHandler := players.NewHandler(playerService)
+	// r.Get("/players", playerHandler.ListPlayersHandler)
+	// r.Get("/players/{uuid}", playerHandler.ListPlayer)
 
-	// Start statistics service & handler
-	statisticsService := statistics.NewService(repo)
-	statisticsHandler := statistics.NewHandler(statisticsService)
-	statisticsHandler.InitialiseLeaderboard()
-	r.Get("/api/statistics/mappings", statisticsHandler.GetMappings)
-	r.Get("/api/statistics/players", statisticsHandler.ListPlayers)
+	// Start mapping service & handler
+	mappingService := mapping.NewService(repo)
+	mappingHandler := mapping.NewHandler(mappingService)
+	// load mapping data
+	materials := mappingHandler.GetMaterials(context.Background())
+	bannedPlacedMaterials, bannedBrokenMaterials := mappingHandler.GetBannedMaterials(context.Background(), materials)
+	causeMapping := mappingHandler.GetDeathCauseMapping(context.Background())
+	mobMapping := mappingHandler.GetMobMapping(context.Background())
+	advancementMapping := mappingHandler.GetAdvancementMapping(context.Background())
 
-	r.Get("/api/statistics/featured-players", statisticsHandler.ListFeaturedPlayers)
+	mappingData := &mapping.MappingData{
+		Materials:             materials,
+		BannedPlacedMaterials: bannedPlacedMaterials,
+		BannedBrokenMaterials: bannedBrokenMaterials,
+		CauseMapping:          causeMapping,
+		MobMapping:            mobMapping,
+		AdvancementMapping:    advancementMapping,
+	}
 
-	r.Get("/api/statistics/{uuid}", statisticsHandler.ShowPlayerOverview)
-	r.Get("/api/statistics/{uuid}/block-data", statisticsHandler.ListBlockData)
-	r.Get("/api/statistics/{uuid}/sessions", statisticsHandler.ListSessionData)
-	r.Get("/api/statistics/{uuid}/deaths", statisticsHandler.ListDeaths)
-	r.Get("/api/statistics/{uuid}/advancements", statisticsHandler.ListAdvancements)
+	// schedule mapping data update
 
-	r.Get("/api/statistics/{uuid}/mob-kill-chart-data", statisticsHandler.ListMobKillChartData)
+	// Start leaderboard service
+	leaderboardService := leaderboards.NewService(repo)
+	leaderboardHandler := leaderboards.NewHandler(leaderboardService)
+	leaderboardHandler.Initialise(mappingData)
+	r.Get("/api/leaderboards/server", leaderboardHandler.ListServerLeaderboard)
 
 	return r
 }
