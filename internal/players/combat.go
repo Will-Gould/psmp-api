@@ -1,4 +1,4 @@
-package leaderboards
+package players
 
 import (
 	"context"
@@ -42,21 +42,21 @@ func calculateCombatScore(
 	return combatScore
 }
 
-func (lh leaderboardHandler) getCombatOverview(ctx context.Context, uuid string) (responsemodels.CombatOverview, error) {
+func (ph playerHandler) getCombatOverview(ctx context.Context, uuid string) (responsemodels.CombatOverview, error) {
 	// count deaths
-	deaths, err := lh.service.CountDeathsByPlayer(ctx, uuid)
+	deaths, err := ph.service.CountDeathsByPlayer(ctx, uuid)
 	if err != nil {
 		deaths = 0
 	}
 
 	// count PvP kills
-	pvpKills, err := lh.service.CountPvpKillsByPlayer(ctx, uuid)
+	pvpKills, err := ph.service.CountPvpKillsByPlayer(ctx, uuid)
 	if err != nil {
 		pvpKills = 0
 	}
 
 	// count mobs killed
-	mobsKilled, err := lh.service.CountMobKillsByPlayer(ctx, uuid)
+	mobsKilled, err := ph.service.CountMobKillsByPlayer(ctx, uuid)
 	if err != nil {
 		mobsKilled = 0
 	}
@@ -73,27 +73,27 @@ func (lh leaderboardHandler) getCombatOverview(ctx context.Context, uuid string)
 	}
 
 	// get notable mobs killed
-	elderGuardiansKilled, err := lh.service.CountSpecificMobKillsByUuid(ctx, mapping.ELDER_GUARDIAN, uuid)
+	elderGuardiansKilled, err := ph.service.CountSpecificMobKillsByUuid(ctx, mapping.ELDER_GUARDIAN, uuid)
 	if err != nil {
 		elderGuardiansKilled = 0
 	}
-	enderDragonsKilled, err := lh.service.CountSpecificMobKillsByUuid(ctx, mapping.ENDER_DRAGON, uuid)
+	enderDragonsKilled, err := ph.service.CountSpecificMobKillsByUuid(ctx, mapping.ENDER_DRAGON, uuid)
 	if err != nil {
 		enderDragonsKilled = 0
 	}
-	evokersKilled, err := lh.service.CountSpecificMobKillsByUuid(ctx, mapping.EVOKER, uuid)
+	evokersKilled, err := ph.service.CountSpecificMobKillsByUuid(ctx, mapping.EVOKER, uuid)
 	if err != nil {
 		evokersKilled = 0
 	}
-	piglinBrutesKilled, err := lh.service.CountSpecificMobKillsByUuid(ctx, mapping.PIGLIN_BRUTE, uuid)
+	piglinBrutesKilled, err := ph.service.CountSpecificMobKillsByUuid(ctx, mapping.PIGLIN_BRUTE, uuid)
 	if err != nil {
 		piglinBrutesKilled = 0
 	}
-	wardensKilled, err := lh.service.CountSpecificMobKillsByUuid(ctx, mapping.WARDEN, uuid)
+	wardensKilled, err := ph.service.CountSpecificMobKillsByUuid(ctx, mapping.WARDEN, uuid)
 	if err != nil {
 		wardensKilled = 0
 	}
-	withersKilled, err := lh.service.CountSpecificMobKillsByUuid(ctx, mapping.WITHER, uuid)
+	withersKilled, err := ph.service.CountSpecificMobKillsByUuid(ctx, mapping.WITHER, uuid)
 	if err != nil {
 		withersKilled = 0
 	}

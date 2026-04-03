@@ -1,4 +1,4 @@
-package leaderboards
+package players
 
 import (
 	"context"
@@ -9,20 +9,20 @@ import (
 	responsemodels "github.com/Will-Gould/psmp-api/internal/response_models"
 )
 
-func (lh leaderboardHandler) getCraftingOverview(ctx context.Context, uuid string, glId int32, md *mapping.MappingData) (responsemodels.CraftingOverview, error) {
+func (ph playerHandler) getCraftingOverview(ctx context.Context, uuid string, glId int32, md *mapping.MappingData) (responsemodels.CraftingOverview, error) {
 	// count blocks
-	blocksBroken, err := lh.service.CountBlocksByUser(ctx, glId, mapping.BLOCK_BROKEN_ACTION, md.BannedBrokenMaterials)
+	blocksBroken, err := ph.service.CountBlocksByUser(ctx, glId, mapping.BLOCK_BROKEN_ACTION, md.BannedBrokenMaterials)
 	if err != nil {
 		blocksBroken = 0
 	}
-	blocksPlaced, err := lh.service.CountBlocksByUser(ctx, glId, mapping.BLOCK_PLACED_ACTION, md.BannedPlacedMaterials)
+	blocksPlaced, err := ph.service.CountBlocksByUser(ctx, glId, mapping.BLOCK_PLACED_ACTION, md.BannedPlacedMaterials)
 	if err != nil {
 		blocksPlaced = 0
 	}
 
 	// count time played
 	var timePlayed int64
-	sessions, err := lh.service.ListSessionDataByUser(ctx, glId)
+	sessions, err := ph.service.ListSessionDataByUser(ctx, glId)
 	if err != nil {
 		timePlayed = 0
 	} else {
@@ -31,7 +31,7 @@ func (lh leaderboardHandler) getCraftingOverview(ctx context.Context, uuid strin
 
 	// get diamonds mined
 	var diamondMined int64
-	psmpstatsPlayer, err := lh.service.FindPsmpstatsPlayerByUuid(ctx, uuid)
+	psmpstatsPlayer, err := ph.service.FindPsmpstatsPlayerByUuid(ctx, uuid)
 	if err != nil {
 		diamondMined = 0
 	} else {

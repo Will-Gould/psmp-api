@@ -1,4 +1,4 @@
-package leaderboards
+package players
 
 import (
 	"context"

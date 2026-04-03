@@ -1,4 +1,4 @@
-package leaderboards
+package players
 
 import (
 	"context"
@@ -38,8 +38,8 @@ var FIVE_POINT_MILESTONES = []string{
 	"minecraft:nether/all_effects",
 }
 
-func (lh leaderboardHandler) getStoryOverview(ctx context.Context, uuid string) (responsemodels.StoryOverview, error) {
-	advancements, err := lh.service.ListAdvancementsByPlayer(ctx, uuid)
+func (ph playerHandler) getStoryOverview(ctx context.Context, uuid string) (responsemodels.StoryOverview, error) {
+	advancements, err := ph.service.ListAdvancementsByPlayer(ctx, uuid)
 	if err != nil {
 		slog.Log(ctx, slog.LevelError, err.Error())
 	}

@@ -8,8 +8,8 @@ import (
 	"time"
 
 	repo "github.com/Will-Gould/psmp-api/internal/adapters/mysql/sqlc"
-	"github.com/Will-Gould/psmp-api/internal/leaderboards"
 	"github.com/Will-Gould/psmp-api/internal/mapping"
+	"github.com/Will-Gould/psmp-api/internal/players"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 )
@@ -57,15 +57,16 @@ func (app application) mount() http.Handler {
 
 	// schedule mapping data updates
 
-	// Start leaderboard service and initialise in memory leaderboards
-	leaderboardService := leaderboards.NewService(repo)
-	leaderboardHandler := leaderboards.NewHandler(leaderboardService)
-	leaderboardHandler.Initialise(context.Background(), mappingData)
+	// Start player service & initialise in memory leaderboards
+	playerService := players.NewService(repo)
+	playerHandler := players.NewHandler(playerService)
+	playerHandler.Initialise(context.Background(), mappingData)
 
-	// schedule leaderboard updates
+	// schedule player list & leaderboard updates
 
-	r.Get("/api/leaderboards/server", leaderboardHandler.ListServerLeaderboard)
-	r.Get("/api/leaderboards/server/{uuid}", leaderboardHandler.GetServerPlayer)
+	r.Get("/api/players/{uuid}", playerHandler.GetServerPlayer)
+	r.Get("/api/players/leaderboards/server", playerHandler.ListServerLeaderboard)
+	r.Get("/api/players/leaderboards/combat", playerHandler.ListCombatLeaderboard)
 
 	return r
 }
