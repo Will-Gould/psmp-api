@@ -5,6 +5,7 @@ type ServerPlayer struct {
 	Name             string
 	GlId             int32
 	PrimaryGroup     string
+	ServerRank       int64
 	CraftingOverview CraftingOverview
 	CombatOverview   CombatOverview
 	StoryOverview    StoryOverview

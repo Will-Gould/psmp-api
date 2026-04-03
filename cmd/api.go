@@ -36,12 +36,6 @@ func (app application) mount() http.Handler {
 	// New repo
 	repo := repo.New(app.db)
 
-	// Start player service & handler
-	// playerService := players.NewService(repo)
-	// playerHandler := players.NewHandler(playerService)
-	// r.Get("/players", playerHandler.ListPlayersHandler)
-	// r.Get("/players/{uuid}", playerHandler.ListPlayer)
-
 	// Start mapping service & handler
 	mappingService := mapping.NewService(repo)
 	mappingHandler := mapping.NewHandler(mappingService)
@@ -61,13 +55,17 @@ func (app application) mount() http.Handler {
 		AdvancementMapping:    advancementMapping,
 	}
 
-	// schedule mapping data update
+	// schedule mapping data updates
 
-	// Start leaderboard service
+	// Start leaderboard service and initialise in memory leaderboards
 	leaderboardService := leaderboards.NewService(repo)
 	leaderboardHandler := leaderboards.NewHandler(leaderboardService)
-	leaderboardHandler.Initialise(mappingData)
+	leaderboardHandler.Initialise(context.Background(), mappingData)
+
+	// schedule leaderboard updates
+
 	r.Get("/api/leaderboards/server", leaderboardHandler.ListServerLeaderboard)
+	r.Get("/api/leaderboards/server/{uuid}", leaderboardHandler.GetServerPlayer)
 
 	return r
 }
