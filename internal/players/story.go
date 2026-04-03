@@ -38,7 +38,7 @@ var FIVE_POINT_MILESTONES = []string{
 	"minecraft:nether/all_effects",
 }
 
-func (ph playerHandler) getStoryOverview(ctx context.Context, uuid string) (responsemodels.StoryOverview, error) {
+func (ph *playerHandler) getStoryOverview(ctx context.Context, uuid string) (responsemodels.StoryOverview, error) {
 	advancements, err := ph.service.ListAdvancementsByPlayer(ctx, uuid)
 	if err != nil {
 		slog.Log(ctx, slog.LevelError, err.Error())

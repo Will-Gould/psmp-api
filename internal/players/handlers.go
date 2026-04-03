@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"slices"
 	"sort"
+	"sync"
 
 	"github.com/Will-Gould/psmp-api/internal/json"
 	"github.com/Will-Gould/psmp-api/internal/mapping"
@@ -15,6 +16,7 @@ import (
 )
 
 type playerHandler struct {
+	mu                  sync.RWMutex
 	service             Service
 	players             map[string]responsemodels.ServerPlayer
 	combatLeaderboard   map[string]responsemodels.LeaderboardPlayer
@@ -32,23 +34,25 @@ func NewHandler(service Service) *playerHandler {
 	}
 }
 
-func (ph playerHandler) Initialise(ctx context.Context, md *mapping.MappingData) {
+func (ph *playerHandler) Load(ctx context.Context, md *mapping.MappingData) {
+	ph.mu.Lock()
 	ph.loadServerLeaderboard(ctx, md)
 	ph.formServerRanks()
 	ph.formCombatRanks()
 	ph.formCraftingRanks()
 	ph.formStoryRanks()
+	ph.mu.Unlock()
 }
 
-func (ph playerHandler) ListServerLeaderboard(w http.ResponseWriter, r *http.Request) {
+func (ph *playerHandler) ListServerLeaderboard(w http.ResponseWriter, r *http.Request) {
 	json.Write(w, http.StatusOK, slices.Collect(maps.Values(ph.players)))
 }
 
-func (ph playerHandler) ListCombatLeaderboard(w http.ResponseWriter, r *http.Request) {
+func (ph *playerHandler) ListCombatLeaderboard(w http.ResponseWriter, r *http.Request) {
 	json.Write(w, http.StatusOK, slices.Collect(maps.Values(ph.combatLeaderboard)))
 }
 
-func (ph playerHandler) GetServerPlayer(w http.ResponseWriter, r *http.Request) {
+func (ph *playerHandler) GetServerPlayer(w http.ResponseWriter, r *http.Request) {
 	uuid := chi.URLParam(r, "uuid")
 	sp, ok := ph.players[uuid]
 	if ok {
@@ -58,7 +62,7 @@ func (ph playerHandler) GetServerPlayer(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-func (ph playerHandler) loadServerLeaderboard(ctx context.Context, md *mapping.MappingData) {
+func (ph *playerHandler) loadServerLeaderboard(ctx context.Context, md *mapping.MappingData) {
 	luckpermsPlayers, err := ph.service.ListLuckpermsPlayers(ctx)
 	if err != nil {
 		slog.Log(ctx, slog.LevelError, "Failed to retrieve Luckperms players")
@@ -82,7 +86,7 @@ func (ph playerHandler) loadServerLeaderboard(ctx context.Context, md *mapping.M
 	}
 }
 
-func (ph playerHandler) getPlayerData(ctx context.Context, player *responsemodels.ServerPlayer, md *mapping.MappingData) {
+func (ph *playerHandler) getPlayerData(ctx context.Context, player *responsemodels.ServerPlayer, md *mapping.MappingData) {
 
 	// get combat overview
 	combatOverview, err := ph.getCombatOverview(ctx, player.Uuid)
@@ -110,7 +114,7 @@ func (ph playerHandler) getPlayerData(ctx context.Context, player *responsemodel
 	player.Score = player.CombatOverview.CombatScore + player.CraftingOverview.CraftingScore + player.StoryOverview.StoryScore
 }
 
-func (ph playerHandler) formServerRanks() {
+func (ph *playerHandler) formServerRanks() {
 	// get player slice and sort by score
 	l := slices.Collect(maps.Values(ph.players))
 	sort.Slice(l, func(i, j int) bool {
@@ -126,7 +130,7 @@ func (ph playerHandler) formServerRanks() {
 	}
 }
 
-func (ph playerHandler) formCombatRanks() {
+func (ph *playerHandler) formCombatRanks() {
 	// copy player to slice and sort by combat score
 	l := slices.Collect(maps.Values(ph.players))
 	sort.Slice(l, func(i, j int) bool {
@@ -146,7 +150,7 @@ func (ph playerHandler) formCombatRanks() {
 	}
 }
 
-func (ph playerHandler) formCraftingRanks() {
+func (ph *playerHandler) formCraftingRanks() {
 	// copy player to slice and sort by crafting score
 	l := slices.Collect(maps.Values(ph.players))
 	sort.Slice(l, func(i, j int) bool {
@@ -162,11 +166,11 @@ func (ph playerHandler) formCraftingRanks() {
 			Ranking: int64(i) + 1,
 			Value:   sp.CombatOverview.CombatScore,
 		}
-		ph.combatLeaderboard[sp.Uuid] = lp
+		ph.craftingLeaderboard[sp.Uuid] = lp
 	}
 }
 
-func (ph playerHandler) formStoryRanks() {
+func (ph *playerHandler) formStoryRanks() {
 	// copy player to slice and sort by story score
 	l := slices.Collect(maps.Values(ph.players))
 	sort.Slice(l, func(i, j int) bool {
@@ -182,6 +186,6 @@ func (ph playerHandler) formStoryRanks() {
 			Ranking: int64(i) + 1,
 			Value:   sp.StoryOverview.StoryScore,
 		}
-		ph.combatLeaderboard[sp.Uuid] = lp
+		ph.storyLeaderboard[sp.Uuid] = lp
 	}
 }

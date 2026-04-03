@@ -36,33 +36,37 @@ func (app application) mount() http.Handler {
 	// New repo
 	repo := repo.New(app.db)
 
+	// New cron scheduler
+
 	// Start mapping service & handler
 	mappingService := mapping.NewService(repo)
 	mappingHandler := mapping.NewHandler(mappingService)
 	// load mapping data
-	materials := mappingHandler.GetMaterials(context.Background())
-	bannedPlacedMaterials, bannedBrokenMaterials := mappingHandler.GetBannedMaterials(context.Background(), materials)
-	causeMapping := mappingHandler.GetDeathCauseMapping(context.Background())
-	mobMapping := mappingHandler.GetMobMapping(context.Background())
-	advancementMapping := mappingHandler.GetAdvancementMapping(context.Background())
-
-	mappingData := &mapping.MappingData{
-		Materials:             materials,
-		BannedPlacedMaterials: bannedPlacedMaterials,
-		BannedBrokenMaterials: bannedBrokenMaterials,
-		CauseMapping:          causeMapping,
-		MobMapping:            mobMapping,
-		AdvancementMapping:    advancementMapping,
-	}
+	mappingData := mapping.MappingData{}
+	mappingHandler.LoadMappingData(context.Background(), &mappingData)
 
 	// schedule mapping data updates
+	go func() {
+		ticker := time.NewTicker(24 * time.Hour)
+		for range ticker.C {
+			slog.Log(context.Background(), slog.LevelInfo, "Updating mapping...")
+			mappingHandler.LoadMappingData(context.Background(), &mappingData)
+		}
+	}()
 
-	// Start player service & initialise in memory leaderboards
+	// Start player service & load in memory leaderboards
 	playerService := players.NewService(repo)
 	playerHandler := players.NewHandler(playerService)
-	playerHandler.Initialise(context.Background(), mappingData)
+	playerHandler.Load(context.Background(), &mappingData)
 
 	// schedule player list & leaderboard updates
+	go func() {
+		ticker := time.NewTicker(10 * time.Minute)
+		for range ticker.C {
+			slog.Log(context.Background(), slog.LevelInfo, "Updating leaderboard...")
+			playerHandler.Load(context.Background(), &mappingData)
+		}
+	}()
 
 	r.Get("/api/players/{uuid}", playerHandler.GetServerPlayer)
 	r.Get("/api/players/leaderboards/server", playerHandler.ListServerLeaderboard)

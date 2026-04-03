@@ -42,7 +42,7 @@ func calculateCombatScore(
 	return combatScore
 }
 
-func (ph playerHandler) getCombatOverview(ctx context.Context, uuid string) (responsemodels.CombatOverview, error) {
+func (ph *playerHandler) getCombatOverview(ctx context.Context, uuid string) (responsemodels.CombatOverview, error) {
 	// count deaths
 	deaths, err := ph.service.CountDeathsByPlayer(ctx, uuid)
 	if err != nil {

@@ -19,6 +19,23 @@ func NewHandler(service Service) *mappingHandler {
 	}
 }
 
+func (mh mappingHandler) LoadMappingData(ctx context.Context, md *MappingData) {
+	md.Mu.Lock()
+	materials := mh.GetMaterials(ctx)
+	bannedPlacedMaterials, bannedBrokenMaterials := mh.GetBannedMaterials(ctx, materials)
+	causeMapping := mh.GetDeathCauseMapping(ctx)
+	mobMapping := mh.GetMobMapping(ctx)
+	advancementMapping := mh.GetAdvancementMapping(ctx)
+
+	md.Materials = materials
+	md.BannedPlacedMaterials = bannedPlacedMaterials
+	md.BannedBrokenMaterials = bannedBrokenMaterials
+	md.CauseMapping = causeMapping
+	md.MobMapping = mobMapping
+	md.AdvancementMapping = advancementMapping
+	md.Mu.Unlock()
+}
+
 func (mh mappingHandler) GetMaterials(ctx context.Context) []repo.Material {
 	// get materials mapping
 	slog.Log(ctx, slog.LevelInfo, "Punching trees...")
