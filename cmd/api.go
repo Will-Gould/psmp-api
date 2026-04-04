@@ -36,8 +36,6 @@ func (app application) mount() http.Handler {
 	// New repo
 	repo := repo.New(app.db)
 
-	// New cron scheduler
-
 	// Start mapping service & handler
 	mappingService := mapping.NewService(repo)
 	mappingHandler := mapping.NewHandler(mappingService)
@@ -71,6 +69,8 @@ func (app application) mount() http.Handler {
 	r.Get("/api/players/{uuid}", playerHandler.GetServerPlayer)
 	r.Get("/api/players/leaderboards/server", playerHandler.ListServerLeaderboard)
 	r.Get("/api/players/leaderboards/combat", playerHandler.ListCombatLeaderboard)
+	r.Get("/api/players/leaderboards/crafting", playerHandler.ListCraftingLeaderboard)
+	r.Get("/api/players/leaderboards/story", playerHandler.ListStoryLeaderboard)
 
 	return r
 }

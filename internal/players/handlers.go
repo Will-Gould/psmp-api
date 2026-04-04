@@ -52,6 +52,14 @@ func (ph *playerHandler) ListCombatLeaderboard(w http.ResponseWriter, r *http.Re
 	json.Write(w, http.StatusOK, slices.Collect(maps.Values(ph.combatLeaderboard)))
 }
 
+func (ph *playerHandler) ListCraftingLeaderboard(w http.ResponseWriter, r *http.Request) {
+	json.Write(w, http.StatusOK, slices.Collect(maps.Values(ph.craftingLeaderboard)))
+}
+
+func (ph *playerHandler) ListStoryLeaderboard(w http.ResponseWriter, r *http.Request) {
+	json.Write(w, http.StatusOK, slices.Collect(maps.Values(ph.storyLeaderboard)))
+}
+
 func (ph *playerHandler) GetServerPlayer(w http.ResponseWriter, r *http.Request) {
 	uuid := chi.URLParam(r, "uuid")
 	sp, ok := ph.players[uuid]
@@ -154,7 +162,7 @@ func (ph *playerHandler) formCraftingRanks() {
 	// copy player to slice and sort by crafting score
 	l := slices.Collect(maps.Values(ph.players))
 	sort.Slice(l, func(i, j int) bool {
-		if l[i].CombatOverview.CombatScore < l[j].CombatOverview.CombatScore {
+		if l[i].CraftingOverview.CraftingScore < l[j].CraftingOverview.CraftingScore {
 			return true
 		}
 		return false
@@ -164,7 +172,7 @@ func (ph *playerHandler) formCraftingRanks() {
 		lp := responsemodels.LeaderboardPlayer{
 			Uuid:    sp.Uuid,
 			Ranking: int64(i) + 1,
-			Value:   sp.CombatOverview.CombatScore,
+			Value:   sp.CraftingOverview.CraftingScore,
 		}
 		ph.craftingLeaderboard[sp.Uuid] = lp
 	}
