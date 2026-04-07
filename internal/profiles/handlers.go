@@ -38,10 +38,11 @@ func (ph *profileHandler) GetMobKillChartData(w http.ResponseWriter, r *http.Req
 		return false
 	})
 
-	startDate := time.Unix(int64(mobKills[0].Time), 0)
-	endDate := time.Now().AddDate(0, 0, 1)
+	firstKillTime := time.Unix(int64(mobKills[0].Time), 0)
+	earliestMidnight := firstKillTime.Truncate(24 * time.Hour)
+	endDate := time.Now()
 	// initialise value for each date between now and first kill
-	for d := startDate; !d.After(endDate); d = d.AddDate(0, 0, 1) {
+	for d := earliestMidnight; !d.After(endDate); d = d.AddDate(0, 0, 1) {
 		dateString := d.Local().Format(DATE_FORMAT)
 		data = append(data, responsemodels.SingleDailyChartItem{
 			Date:  dateString,

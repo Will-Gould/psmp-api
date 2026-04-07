@@ -19,18 +19,18 @@ type playerHandler struct {
 	mu                  sync.RWMutex
 	service             Service
 	players             map[string]responsemodels.ServerPlayer
-	combatLeaderboard   map[string]responsemodels.LeaderboardPlayer
-	craftingLeaderboard map[string]responsemodels.LeaderboardPlayer
-	storyLeaderboard    map[string]responsemodels.LeaderboardPlayer
+	combatLeaderboard   map[string]responsemodels.CombatLeaderboardPlayer
+	craftingLeaderboard map[string]responsemodels.CraftingLeaderboardPlayer
+	storyLeaderboard    map[string]responsemodels.StoryLeaderboardPlayer
 }
 
 func NewHandler(service Service) *playerHandler {
 	return &playerHandler{
 		service:             service,
 		players:             make(map[string]responsemodels.ServerPlayer),
-		craftingLeaderboard: make(map[string]responsemodels.LeaderboardPlayer),
-		combatLeaderboard:   make(map[string]responsemodels.LeaderboardPlayer),
-		storyLeaderboard:    make(map[string]responsemodels.LeaderboardPlayer),
+		craftingLeaderboard: make(map[string]responsemodels.CraftingLeaderboardPlayer),
+		combatLeaderboard:   make(map[string]responsemodels.CombatLeaderboardPlayer),
+		storyLeaderboard:    make(map[string]responsemodels.StoryLeaderboardPlayer),
 	}
 }
 
@@ -42,22 +42,6 @@ func (ph *playerHandler) Load(ctx context.Context, md *mapping.MappingData) {
 	ph.formCraftingRanks()
 	ph.formStoryRanks()
 	ph.mu.Unlock()
-}
-
-func (ph *playerHandler) ListServerLeaderboard(w http.ResponseWriter, r *http.Request) {
-	json.Write(w, http.StatusOK, slices.Collect(maps.Values(ph.players)))
-}
-
-func (ph *playerHandler) ListCombatLeaderboard(w http.ResponseWriter, r *http.Request) {
-	json.Write(w, http.StatusOK, slices.Collect(maps.Values(ph.combatLeaderboard)))
-}
-
-func (ph *playerHandler) ListCraftingLeaderboard(w http.ResponseWriter, r *http.Request) {
-	json.Write(w, http.StatusOK, slices.Collect(maps.Values(ph.craftingLeaderboard)))
-}
-
-func (ph *playerHandler) ListStoryLeaderboard(w http.ResponseWriter, r *http.Request) {
-	json.Write(w, http.StatusOK, slices.Collect(maps.Values(ph.storyLeaderboard)))
 }
 
 func (ph *playerHandler) GetServerPlayer(w http.ResponseWriter, r *http.Request) {
@@ -183,10 +167,15 @@ func (ph *playerHandler) formCombatRanks() {
 	})
 
 	for i, sp := range l {
-		lp := responsemodels.LeaderboardPlayer{
-			Uuid:    sp.Uuid,
-			Ranking: int64(i) + 1,
-			Value:   sp.CombatOverview.CombatScore,
+		lp := responsemodels.CombatLeaderboardPlayer{
+			Uuid:         sp.Uuid,
+			Name:         sp.Name,
+			PrimaryGroup: sp.PrimaryGroup,
+			Rank:         int64(i) + 1,
+			PvpKdRatio:   sp.CombatOverview.PvpKdRatio,
+			PvpKills:     sp.CombatOverview.PvpKills,
+			MobKills:     sp.CombatOverview.MobKills,
+			Deaths:       sp.CombatOverview.Deaths,
 		}
 		ph.combatLeaderboard[sp.Uuid] = lp
 	}
@@ -203,10 +192,14 @@ func (ph *playerHandler) formCraftingRanks() {
 	})
 
 	for i, sp := range l {
-		lp := responsemodels.LeaderboardPlayer{
-			Uuid:    sp.Uuid,
-			Ranking: int64(i) + 1,
-			Value:   sp.CraftingOverview.CraftingScore,
+		lp := responsemodels.CraftingLeaderboardPlayer{
+			Uuid:          sp.Uuid,
+			Name:          sp.Name,
+			PrimaryGroup:  sp.PrimaryGroup,
+			Rank:          int64(i) + 1,
+			BlocksPlaced:  sp.CraftingOverview.BlocksPlaced,
+			BlocksBroken:  sp.CraftingOverview.BlocksBroken,
+			DiamondsMined: sp.CraftingOverview.DiamondsMined,
 		}
 		ph.craftingLeaderboard[sp.Uuid] = lp
 	}
@@ -223,10 +216,11 @@ func (ph *playerHandler) formStoryRanks() {
 	})
 
 	for i, sp := range l {
-		lp := responsemodels.LeaderboardPlayer{
-			Uuid:    sp.Uuid,
-			Ranking: int64(i) + 1,
-			Value:   sp.StoryOverview.StoryScore,
+		lp := responsemodels.StoryLeaderboardPlayer{
+			Uuid:         sp.Uuid,
+			Name:         sp.Name,
+			PrimaryGroup: sp.PrimaryGroup,
+			Rank:         int64(i) + 1,
 		}
 		ph.storyLeaderboard[sp.Uuid] = lp
 	}
