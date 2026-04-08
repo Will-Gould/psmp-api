@@ -23,6 +23,7 @@ type application struct {
 	db *sql.DB
 }
 
+// cache of players
 type playerStore struct {
 	mu         sync.RWMutex
 	playerList map[string]responsemodels.ServerPlayer
