@@ -5,12 +5,14 @@ import (
 	"database/sql"
 	"log/slog"
 	"net/http"
+	"sync"
 	"time"
 
 	repo "github.com/Will-Gould/psmp-api/internal/adapters/mysql/sqlc"
 	"github.com/Will-Gould/psmp-api/internal/mapping"
 	"github.com/Will-Gould/psmp-api/internal/players"
 	"github.com/Will-Gould/psmp-api/internal/profiles"
+	responsemodels "github.com/Will-Gould/psmp-api/internal/response_models"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 )
@@ -19,6 +21,12 @@ type application struct {
 	config config
 	// logger
 	db *sql.DB
+}
+
+// cache of players
+type playerStore struct {
+	mu         sync.RWMutex
+	playerList map[string]responsemodels.ServerPlayer
 }
 
 // mount
@@ -46,7 +54,7 @@ func (app application) mount() http.Handler {
 
 	// schedule mapping data updates
 	go func() {
-		ticker := time.NewTicker(24 * time.Hour)
+		ticker := time.NewTicker(10 * time.Minute)
 		for range ticker.C {
 			slog.Log(context.Background(), slog.LevelInfo, "Updating mapping...")
 			mappingHandler.LoadMappingData(context.Background(), &mappingData)
@@ -54,16 +62,23 @@ func (app application) mount() http.Handler {
 	}()
 
 	// Start player service & load in memory leaderboards
+	playerStore := playerStore{
+		playerList: make(map[string]responsemodels.ServerPlayer),
+	}
 	playerService := players.NewService(repo)
-	playerHandler := players.NewHandler(playerService)
+	playerHandler := players.NewHandler(playerService, playerStore.playerList)
+	playerStore.mu.Lock()
 	playerHandler.Load(context.Background(), &mappingData)
+	playerStore.mu.Unlock()
 
 	// schedule player list & leaderboard updates
 	go func() {
 		ticker := time.NewTicker(10 * time.Minute)
 		for range ticker.C {
 			slog.Log(context.Background(), slog.LevelInfo, "Updating leaderboard...")
+			playerStore.mu.Lock()
 			playerHandler.Load(context.Background(), &mappingData)
+			playerStore.mu.Unlock()
 		}
 	}()
 

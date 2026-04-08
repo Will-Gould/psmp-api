@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"slices"
 	"sort"
-	"sync"
 
 	"github.com/Will-Gould/psmp-api/internal/json"
 	"github.com/Will-Gould/psmp-api/internal/mapping"
@@ -16,7 +15,6 @@ import (
 )
 
 type playerHandler struct {
-	mu                  sync.RWMutex
 	service             Service
 	players             map[string]responsemodels.ServerPlayer
 	combatLeaderboard   map[string]responsemodels.CombatLeaderboardPlayer
@@ -25,10 +23,10 @@ type playerHandler struct {
 	statLeaderboards    StatLeaderboards
 }
 
-func NewHandler(service Service) *playerHandler {
+func NewHandler(service Service, players map[string]responsemodels.ServerPlayer) *playerHandler {
 	return &playerHandler{
 		service:             service,
-		players:             make(map[string]responsemodels.ServerPlayer),
+		players:             players,
 		craftingLeaderboard: make(map[string]responsemodels.CraftingLeaderboardPlayer),
 		combatLeaderboard:   make(map[string]responsemodels.CombatLeaderboardPlayer),
 		storyLeaderboard:    make(map[string]responsemodels.StoryLeaderboardPlayer),
@@ -36,7 +34,6 @@ func NewHandler(service Service) *playerHandler {
 }
 
 func (ph *playerHandler) Load(ctx context.Context, md *mapping.MappingData) {
-	ph.mu.Lock()
 	ph.loadServerLeaderboard(ctx, md)
 	ph.loadStatLeaderboards()
 	ph.formServerRanks()
@@ -44,7 +41,6 @@ func (ph *playerHandler) Load(ctx context.Context, md *mapping.MappingData) {
 	ph.formCraftingRanks()
 	ph.formStoryRanks()
 	ph.formStatRanks()
-	ph.mu.Unlock()
 }
 
 func (ph *playerHandler) GetServerPlayer(w http.ResponseWriter, r *http.Request) {

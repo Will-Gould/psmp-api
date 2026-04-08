@@ -134,6 +134,7 @@ var BANNED_BROKEN_MATERIALS = []string{
 	"kelp",
 	"leaf_litter",
 	"snow",
+	"bush",
 }
 
 type MappingData struct {
