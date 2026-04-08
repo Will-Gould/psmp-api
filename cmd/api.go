@@ -1,14 +1,16 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"log/slog"
 	"net/http"
 	"time"
 
 	repo "github.com/Will-Gould/psmp-api/internal/adapters/mysql/sqlc"
+	"github.com/Will-Gould/psmp-api/internal/mapping"
 	"github.com/Will-Gould/psmp-api/internal/players"
-	"github.com/Will-Gould/psmp-api/internal/statistics"
+	"github.com/Will-Gould/psmp-api/internal/profiles"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 )
@@ -35,21 +37,61 @@ func (app application) mount() http.Handler {
 	// New repo
 	repo := repo.New(app.db)
 
-	// Start player service & handler
+	// Start mapping service & handler
+	mappingService := mapping.NewService(repo)
+	mappingHandler := mapping.NewHandler(mappingService)
+	// load mapping data
+	mappingData := mapping.MappingData{}
+	mappingHandler.LoadMappingData(context.Background(), &mappingData)
+
+	// schedule mapping data updates
+	go func() {
+		ticker := time.NewTicker(24 * time.Hour)
+		for range ticker.C {
+			slog.Log(context.Background(), slog.LevelInfo, "Updating mapping...")
+			mappingHandler.LoadMappingData(context.Background(), &mappingData)
+		}
+	}()
+
+	// Start player service & load in memory leaderboards
 	playerService := players.NewService(repo)
 	playerHandler := players.NewHandler(playerService)
-	r.Get("/players", playerHandler.ListPlayersHandler)
-	r.Get("/players/{uuid}", playerHandler.ListPlayer)
+	playerHandler.Load(context.Background(), &mappingData)
 
-	// Start statistics service & handler
-	statisticsService := statistics.NewService(repo)
-	statisticsHandler := statistics.NewHandler(statisticsService)
-	r.Get("/statistics/mappings", statisticsHandler.GetMappings)
-	r.Get("/statistics/{uuid}", statisticsHandler.ShowPlayerOverview)
-	r.Get("/statistics/{uuid}/block-data", statisticsHandler.ListBlockData)
-	r.Get("/statistics/{uuid}/sessions", statisticsHandler.ListSessionData)
-	r.Get("/statistics/{uuid}/deaths", statisticsHandler.ListDeaths)
-	r.Get("/statistics/{uuid}/advancements", statisticsHandler.ListAdvancements)
+	// schedule player list & leaderboard updates
+	go func() {
+		ticker := time.NewTicker(10 * time.Minute)
+		for range ticker.C {
+			slog.Log(context.Background(), slog.LevelInfo, "Updating leaderboard...")
+			playerHandler.Load(context.Background(), &mappingData)
+		}
+	}()
+
+	// Start profile service & handler
+	profileService := profiles.NewService(repo)
+	profileHandler := profiles.NewHandler(profileService)
+
+	// Map endpoints
+	// players
+	r.Get("/api/players/{uuid}", playerHandler.GetServerPlayer)
+	r.Get("/api/players/leaderboards/server", playerHandler.ListServerLeaderboard)
+	r.Get("/api/players/leaderboards/combat", playerHandler.ListCombatLeaderboard)
+	r.Get("/api/players/leaderboards/crafting", playerHandler.ListCraftingLeaderboard)
+	r.Get("/api/players/leaderboards/story", playerHandler.ListStoryLeaderboard)
+	r.Get("/api/players/leaderboards/combat/{uuid}", playerHandler.GetCombatLeaderboardPlayer)
+	r.Get("/api/players/leaderboards/crafting/{uuid}", playerHandler.GetCraftingLeaderboardPlayer)
+	r.Get("/api/players/leaderboards/story/{uuid}", playerHandler.GetStoryLeaderboardPlayer)
+
+	// stat leaderboards
+	r.Get("/api/players/leaderboards/stats/{uuid}", playerHandler.GetStatRanks)
+
+	// features
+	r.Get("/api/players/leaderboards/champion-player", playerHandler.GetChampionPlayer)
+	r.Get("/api/players/leaderboards/most-dangerous-player", playerHandler.GetMostDangerousPlayer)
+	r.Get("/api/players/leaderboards/biggest-builder", playerHandler.GetBiggestBuilder)
+
+	// profiles
+	r.Get("/api/profiles/{uuid}/daily-mob-kill-chart", profileHandler.GetMobKillChartData)
 
 	return r
 }

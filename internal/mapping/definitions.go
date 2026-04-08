@@ -1,6 +1,10 @@
-package statistics
+package mapping
 
-import repo "github.com/Will-Gould/psmp-api/internal/adapters/mysql/sqlc"
+import (
+	"sync"
+
+	repo "github.com/Will-Gould/psmp-api/internal/adapters/mysql/sqlc"
+)
 
 const BLOCK_BROKEN_ACTION = 0
 const BLOCK_PLACED_ACTION = 1
@@ -132,23 +136,12 @@ var BANNED_BROKEN_MATERIALS = []string{
 	"snow",
 }
 
-type Overview struct {
-	Player           Player
-	CraftingOverview CraftingOverview
-	CombatOverview   CombatOverview
-	StoryOverview    StoryOverview
-	Score            float64
-	// Advancements     []repo.PsmpstatsPlayerAdvancement
-}
-
-type Player struct {
-	Uuid         string
-	Name         string
-	GlId         int32
-	PrimaryGroup string
-}
-
-type BlockData struct {
-	BlocksBroken []repo.Block
-	BlocksPlaced []repo.Block
+type MappingData struct {
+	Mu                    sync.RWMutex
+	Materials             []repo.Material
+	BannedPlacedMaterials []int32
+	BannedBrokenMaterials []int32
+	CauseMapping          []repo.PsmpstatsCause
+	MobMapping            []repo.PsmpstatsMob
+	AdvancementMapping    []repo.PsmpstatsAdvancement
 }

@@ -1,9 +1,11 @@
-package statistics
+package players
 
 import (
 	"context"
+	"log/slog"
 
 	repo "github.com/Will-Gould/psmp-api/internal/adapters/mysql/sqlc"
+	responsemodels "github.com/Will-Gould/psmp-api/internal/response_models"
 )
 
 var ONE_POINT_MILESTONES = []string{
@@ -36,17 +38,13 @@ var FIVE_POINT_MILESTONES = []string{
 	"minecraft:nether/all_effects",
 }
 
-type StoryOverview struct {
-	StoryScore float64
-}
-
-func GetStoryOverview(ctx context.Context, sh StatisticsHandler, uuid string) (StoryOverview, error) {
-	advancements, err := sh.Service.ListAdvancementsByPlayer(ctx, uuid)
+func (ph *playerHandler) getStoryOverview(ctx context.Context, uuid string) (responsemodels.StoryOverview, error) {
+	advancements, err := ph.service.ListAdvancementsByPlayer(ctx, uuid)
 	if err != nil {
-
+		slog.Log(ctx, slog.LevelError, err.Error())
 	}
 
-	storyOverview := StoryOverview{
+	storyOverview := responsemodels.StoryOverview{
 		StoryScore: calculateStoryScore(advancements),
 	}
 

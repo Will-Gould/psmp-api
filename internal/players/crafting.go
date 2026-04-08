@@ -1,34 +1,28 @@
-package statistics
+package players
 
 import (
 	"context"
 	"sort"
 
 	repo "github.com/Will-Gould/psmp-api/internal/adapters/mysql/sqlc"
+	"github.com/Will-Gould/psmp-api/internal/mapping"
+	responsemodels "github.com/Will-Gould/psmp-api/internal/response_models"
 )
 
-type CraftingOverview struct {
-	CraftingScore float64
-	BlocksPlaced  int64
-	BlocksBroken  int64
-	DiamondsMined int64
-	TimePlayed    int64
-}
-
-func GetCraftingOverview(ctx context.Context, sh StatisticsHandler, uuid string, glUser repo.User) (CraftingOverview, error) {
+func (ph *playerHandler) getCraftingOverview(ctx context.Context, uuid string, glId int32, md *mapping.MappingData) (responsemodels.CraftingOverview, error) {
 	// count blocks
-	blocksBroken, err := sh.Service.CountBlocksByUser(ctx, glUser.ID, BLOCK_BROKEN_ACTION, sh.BannedBrokenMaterials)
+	blocksBroken, err := ph.service.CountBlocksByUser(ctx, glId, mapping.BLOCK_BROKEN_ACTION, md.BannedBrokenMaterials)
 	if err != nil {
 		blocksBroken = 0
 	}
-	blocksPlaced, err := sh.Service.CountBlocksByUser(ctx, glUser.ID, BLOCK_PLACED_ACTION, sh.BannedPlacedMaterials)
+	blocksPlaced, err := ph.service.CountBlocksByUser(ctx, glId, mapping.BLOCK_PLACED_ACTION, md.BannedPlacedMaterials)
 	if err != nil {
 		blocksPlaced = 0
 	}
 
 	// count time played
 	var timePlayed int64
-	sessions, err := sh.Service.ListSessionDataByUser(ctx, glUser.ID)
+	sessions, err := ph.service.ListSessionDataByUser(ctx, glId)
 	if err != nil {
 		timePlayed = 0
 	} else {
@@ -37,7 +31,7 @@ func GetCraftingOverview(ctx context.Context, sh StatisticsHandler, uuid string,
 
 	// get diamonds mined
 	var diamondMined int64
-	psmpstatsPlayer, err := sh.Service.FindPsmpstatsPlayerByUuid(ctx, uuid)
+	psmpstatsPlayer, err := ph.service.FindPsmpstatsPlayerByUuid(ctx, uuid)
 	if err != nil {
 		diamondMined = 0
 	} else {
@@ -47,7 +41,7 @@ func GetCraftingOverview(ctx context.Context, sh StatisticsHandler, uuid string,
 	// calculate crafting score
 	craftingScore := calculateCraftingScore(float64(blocksBroken), float64(blocksPlaced), float64(timePlayed), float64(diamondMined))
 
-	return CraftingOverview{
+	return responsemodels.CraftingOverview{
 		CraftingScore: craftingScore,
 		BlocksPlaced:  blocksPlaced,
 		BlocksBroken:  blocksBroken,
@@ -73,7 +67,7 @@ func countTimePlayed(sessions []repo.Session) int64 {
 	var timePlayed int64
 	var lastSession = sessions[0]
 	for _, s := range sessions {
-		if lastSession.Action == PLAYER_JOIN_ACTION && s.Action == PLAYER_LEAVE_ACTION {
+		if lastSession.Action == mapping.PLAYER_JOIN_ACTION && s.Action == mapping.PLAYER_LEAVE_ACTION {
 			timePlayed += (s.Time - lastSession.Time)
 		}
 		lastSession = s

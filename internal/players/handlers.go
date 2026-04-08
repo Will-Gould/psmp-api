@@ -2,72 +2,344 @@ package players
 
 import (
 	"context"
-	"fmt"
-	"log"
+	"log/slog"
+	"maps"
 	"net/http"
+	"slices"
+	"sort"
+	"sync"
 
 	"github.com/Will-Gould/psmp-api/internal/json"
+	"github.com/Will-Gould/psmp-api/internal/mapping"
+	responsemodels "github.com/Will-Gould/psmp-api/internal/response_models"
 	"github.com/go-chi/chi"
 )
 
-type handler struct {
-	service Service
+type playerHandler struct {
+	mu                  sync.RWMutex
+	service             Service
+	players             map[string]responsemodels.ServerPlayer
+	combatLeaderboard   map[string]responsemodels.CombatLeaderboardPlayer
+	craftingLeaderboard map[string]responsemodels.CraftingLeaderboardPlayer
+	storyLeaderboard    map[string]responsemodels.StoryLeaderboardPlayer
+	statLeaderboards    StatLeaderboards
 }
 
-type Player struct {
-	Uuid          string
-	PrimaryGroup  string
-	GriefLoggerId int32
-	Username      string
-}
-
-func NewHandler(service Service) *handler {
-	return &handler{
-		service: service,
+func NewHandler(service Service) *playerHandler {
+	return &playerHandler{
+		service:             service,
+		players:             make(map[string]responsemodels.ServerPlayer),
+		craftingLeaderboard: make(map[string]responsemodels.CraftingLeaderboardPlayer),
+		combatLeaderboard:   make(map[string]responsemodels.CombatLeaderboardPlayer),
+		storyLeaderboard:    make(map[string]responsemodels.StoryLeaderboardPlayer),
 	}
 }
 
-func (h handler) ListPlayersHandler(w http.ResponseWriter, r *http.Request) {
-	players, err := h.service.ListPlayers(r.Context())
+func (ph *playerHandler) Load(ctx context.Context, md *mapping.MappingData) {
+	ph.mu.Lock()
+	ph.loadServerLeaderboard(ctx, md)
+	ph.loadStatLeaderboards()
+	ph.formServerRanks()
+	ph.formCombatRanks()
+	ph.formCraftingRanks()
+	ph.formStoryRanks()
+	ph.formStatRanks()
+	ph.mu.Unlock()
+}
+
+func (ph *playerHandler) GetServerPlayer(w http.ResponseWriter, r *http.Request) {
+	uuid := chi.URLParam(r, "uuid")
+	sp, ok := ph.players[uuid]
+	if ok {
+		json.Write(w, http.StatusOK, sp)
+	} else {
+		json.Write(w, http.StatusNotFound, nil)
+	}
+}
+
+func (ph *playerHandler) GetChampionPlayer(w http.ResponseWriter, r *http.Request) {
+	for _, p := range ph.players {
+		if p.ServerRank == 1 {
+			json.Write(w, http.StatusOK, p)
+			return
+		}
+	}
+	json.Write(w, http.StatusInternalServerError, nil)
+}
+
+func (ph *playerHandler) GetMostDangerousPlayer(w http.ResponseWriter, r *http.Request) {
+	kdRanking := slices.Collect(maps.Values(ph.players))
+	sort.Slice(kdRanking, func(i, j int) bool {
+		if kdRanking[i].CombatOverview.PvpKdRatio < kdRanking[j].CombatOverview.PvpKdRatio {
+			return true
+		}
+		return false
+	})
+
+	json.Write(w, http.StatusOK, kdRanking[0])
+}
+
+func (ph *playerHandler) GetBiggestBuilder(w http.ResponseWriter, r *http.Request) {
+	buildRanking := slices.Collect(maps.Values(ph.players))
+	sort.Slice(buildRanking, func(i, j int) bool {
+		if buildRanking[i].CraftingOverview.BlocksPlaced < buildRanking[j].CraftingOverview.BlocksPlaced {
+			return true
+		}
+		return false
+	})
+
+	json.Write(w, http.StatusOK, buildRanking[0])
+}
+
+func (ph *playerHandler) loadServerLeaderboard(ctx context.Context, md *mapping.MappingData) {
+	luckpermsPlayers, err := ph.service.ListLuckpermsPlayers(ctx)
 	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		slog.Log(ctx, slog.LevelError, "Failed to retrieve Luckperms players")
 	}
 
-	json.Write(w, http.StatusOK, players)
+	// build overviews
+	for _, p := range luckpermsPlayers {
+		glUser, err := ph.service.FindGriefLoggerUser(ctx, p.Uuid)
+		if err != nil {
+			continue
+		}
+		player := &responsemodels.ServerPlayer{
+			Uuid:         p.Uuid,
+			Name:         glUser.Name,
+			GlId:         glUser.ID,
+			PrimaryGroup: p.PrimaryGroup,
+		}
+		ph.getPlayerData(ctx, player, md)
+
+		ph.players[player.Uuid] = *player
+	}
 }
 
-func (h handler) getPlayer(ctx context.Context, uuid string) (Player, error) {
-	player := Player{}
-
-	// get luckperms data
-	luckpermsPlayer, err := h.service.FindLuckpermsPlayer(ctx, uuid)
-	if err != nil {
-		fmt.Printf("Error retrieving luckperms player with uuid: %v\n", uuid)
-		return player, err
+func (ph *playerHandler) loadStatLeaderboards() {
+	sl := StatLeaderboards{
+		BlocksPlacedLeaderboard:  map[string]responsemodels.LeaderboardPlayer{},
+		BlocksBrokenLeaderboard:  map[string]responsemodels.LeaderboardPlayer{},
+		DiamondsMinedLeaderboard: map[string]responsemodels.LeaderboardPlayer{},
+		TimePlayedLeaderboard:    map[string]responsemodels.LeaderboardPlayer{},
+		PvpKillsLeaderboard:      map[string]responsemodels.LeaderboardPlayer{},
+		DeathsLeaderboard:        map[string]responsemodels.LeaderboardPlayer{},
+		MobKillsLeaderboard:      map[string]responsemodels.LeaderboardPlayer{},
+		PvpKdRatioLeaderboard:    map[string]responsemodels.LeaderboardPlayer{},
 	}
-
-	// get grief logger user
-	griefLoggerUser, err := h.service.FindGriefLoggerUser(ctx, uuid)
-	if err != nil {
-		fmt.Println("Error retrieving grief logger user")
-		return player, err
-	}
-
-	player = Player{uuid, luckpermsPlayer.PrimaryGroup, griefLoggerUser.ID, griefLoggerUser.Name}
-
-	return player, nil
+	ph.statLeaderboards = sl
 }
 
-func (h handler) ListPlayer(w http.ResponseWriter, r *http.Request) {
-	playerUuid := chi.URLParam(r, "uuid")
+func (ph *playerHandler) getPlayerData(ctx context.Context, player *responsemodels.ServerPlayer, md *mapping.MappingData) {
 
-	player, err := h.getPlayer(r.Context(), playerUuid)
+	// get combat overview
+	combatOverview, err := ph.getCombatOverview(ctx, player.Uuid)
 	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		slog.Log(ctx, slog.LevelError, err.Error())
 	}
 
-	json.Write(w, http.StatusOK, player)
+	// get crafting overview
+	craftingOverview, err := ph.getCraftingOverview(ctx, player.Uuid, player.GlId, md)
+	if err != nil {
+		slog.Log(ctx, slog.LevelError, err.Error())
+	}
+
+	// get story overview
+	storyOverview, err := ph.getStoryOverview(ctx, player.Uuid)
+	if err != nil {
+		slog.Log(ctx, slog.LevelError, err.Error())
+	}
+
+	player.CombatOverview = combatOverview
+	player.CraftingOverview = craftingOverview
+	player.StoryOverview = storyOverview
+
+	// calculate total score
+	player.Score = player.CombatOverview.CombatScore + player.CraftingOverview.CraftingScore + player.StoryOverview.StoryScore
+}
+
+func (ph *playerHandler) formServerRanks() {
+	// get player slice and sort by score
+	l := slices.Collect(maps.Values(ph.players))
+	sort.Slice(l, func(i, j int) bool {
+		if l[i].Score < l[j].Score {
+			return true
+		}
+		return false
+	})
+	for i, sp := range l {
+		lp := ph.players[sp.Uuid]
+		lp.ServerRank = int64(i) + 1
+		ph.players[sp.Uuid] = lp
+	}
+}
+
+func (ph *playerHandler) formCombatRanks() {
+	// copy player to slice and sort by combat score
+	l := slices.Collect(maps.Values(ph.players))
+	sort.Slice(l, func(i, j int) bool {
+		if l[i].CombatOverview.CombatScore < l[j].CombatOverview.CombatScore {
+			return true
+		}
+		return false
+	})
+
+	for i, sp := range l {
+		lp := responsemodels.CombatLeaderboardPlayer{
+			Uuid:         sp.Uuid,
+			Name:         sp.Name,
+			PrimaryGroup: sp.PrimaryGroup,
+			Rank:         int64(i) + 1,
+			PvpKdRatio:   sp.CombatOverview.PvpKdRatio,
+			PvpKills:     sp.CombatOverview.PvpKills,
+			MobKills:     sp.CombatOverview.MobKills,
+			Deaths:       sp.CombatOverview.Deaths,
+		}
+		ph.combatLeaderboard[sp.Uuid] = lp
+	}
+}
+
+func (ph *playerHandler) formCraftingRanks() {
+	// copy player to slice and sort by crafting score
+	l := slices.Collect(maps.Values(ph.players))
+	sort.Slice(l, func(i, j int) bool {
+		if l[i].CraftingOverview.CraftingScore < l[j].CraftingOverview.CraftingScore {
+			return true
+		}
+		return false
+	})
+
+	for i, sp := range l {
+		lp := responsemodels.CraftingLeaderboardPlayer{
+			Uuid:          sp.Uuid,
+			Name:          sp.Name,
+			PrimaryGroup:  sp.PrimaryGroup,
+			Rank:          int64(i) + 1,
+			BlocksPlaced:  sp.CraftingOverview.BlocksPlaced,
+			BlocksBroken:  sp.CraftingOverview.BlocksBroken,
+			DiamondsMined: sp.CraftingOverview.DiamondsMined,
+		}
+		ph.craftingLeaderboard[sp.Uuid] = lp
+	}
+}
+
+func (ph *playerHandler) formStoryRanks() {
+	// copy player to slice and sort by story score
+	l := slices.Collect(maps.Values(ph.players))
+	sort.Slice(l, func(i, j int) bool {
+		if l[i].StoryOverview.StoryScore < l[j].StoryOverview.StoryScore {
+			return true
+		}
+		return false
+	})
+
+	for i, sp := range l {
+		lp := responsemodels.StoryLeaderboardPlayer{
+			Uuid:         sp.Uuid,
+			Name:         sp.Name,
+			PrimaryGroup: sp.PrimaryGroup,
+			Rank:         int64(i) + 1,
+		}
+		ph.storyLeaderboard[sp.Uuid] = lp
+	}
+}
+
+func (ph *playerHandler) formStatRanks() {
+	playersSlice := slices.Collect(maps.Values(ph.players))
+	tempLeaderboard := map[string]responsemodels.LeaderboardPlayer{}
+	for _, p := range ph.players {
+		tempLeaderboard[p.Uuid] = responsemodels.LeaderboardPlayer{
+			Uuid: p.Uuid,
+			Rank: 0,
+		}
+	}
+
+	// order for blocks placed ranks
+	sort.Slice(playersSlice, func(i, j int) bool {
+		if playersSlice[i].CraftingOverview.BlocksPlaced < playersSlice[j].CraftingOverview.BlocksPlaced {
+			return true
+		}
+		return false
+	})
+
+	// transfer ranks to temp leaderboard and clone to leaderboard
+	transferRanks(playersSlice, tempLeaderboard)
+	ph.statLeaderboards.BlocksPlacedLeaderboard = maps.Clone(tempLeaderboard)
+
+	// order for blocks broken ranks
+	sort.Slice(playersSlice, func(i, j int) bool {
+		if playersSlice[i].CraftingOverview.BlocksBroken < playersSlice[j].CraftingOverview.BlocksBroken {
+			return true
+		}
+		return false
+	})
+	transferRanks(playersSlice, tempLeaderboard)
+	ph.statLeaderboards.BlocksBrokenLeaderboard = maps.Clone(tempLeaderboard)
+
+	// order for diamonds mined ranks
+	sort.Slice(playersSlice, func(i, j int) bool {
+		if playersSlice[i].CraftingOverview.DiamondsMined < playersSlice[j].CraftingOverview.DiamondsMined {
+			return true
+		}
+		return false
+	})
+	transferRanks(playersSlice, tempLeaderboard)
+	ph.statLeaderboards.DiamondsMinedLeaderboard = maps.Clone(tempLeaderboard)
+
+	// order for time played ranks
+	sort.Slice(playersSlice, func(i, j int) bool {
+		if playersSlice[i].CraftingOverview.TimePlayed < playersSlice[j].CraftingOverview.TimePlayed {
+			return true
+		}
+		return false
+	})
+	transferRanks(playersSlice, tempLeaderboard)
+	ph.statLeaderboards.TimePlayedLeaderboard = maps.Clone(tempLeaderboard)
+
+	// order for pvp kills ranks
+	sort.Slice(playersSlice, func(i, j int) bool {
+		if playersSlice[i].CombatOverview.PvpKills < playersSlice[j].CombatOverview.PvpKills {
+			return true
+		}
+		return false
+	})
+	transferRanks(playersSlice, tempLeaderboard)
+	ph.statLeaderboards.PvpKillsLeaderboard = maps.Clone(tempLeaderboard)
+
+	// order for deaths ranks
+	sort.Slice(playersSlice, func(i, j int) bool {
+		if playersSlice[i].CombatOverview.Deaths < playersSlice[j].CombatOverview.Deaths {
+			return true
+		}
+		return false
+	})
+	transferRanks(playersSlice, tempLeaderboard)
+	ph.statLeaderboards.DeathsLeaderboard = maps.Clone(tempLeaderboard)
+
+	// order for mob kills ranks
+	sort.Slice(playersSlice, func(i, j int) bool {
+		if playersSlice[i].CombatOverview.MobKills < playersSlice[j].CombatOverview.MobKills {
+			return true
+		}
+		return false
+	})
+	transferRanks(playersSlice, tempLeaderboard)
+	ph.statLeaderboards.MobKillsLeaderboard = maps.Clone(tempLeaderboard)
+
+	// order for pvp kd ratio ranks
+	sort.Slice(playersSlice, func(i, j int) bool {
+		if playersSlice[i].CombatOverview.PvpKdRatio < playersSlice[j].CombatOverview.PvpKdRatio {
+			return true
+		}
+		return false
+	})
+	transferRanks(playersSlice, tempLeaderboard)
+	ph.statLeaderboards.PvpKdRatioLeaderboard = maps.Clone(tempLeaderboard)
+}
+
+func transferRanks(players []responsemodels.ServerPlayer, l map[string]responsemodels.LeaderboardPlayer) {
+	for i, p := range players {
+		lp := l[p.Uuid]
+		lp.Rank = int64(i) + 1
+		l[p.Uuid] = lp
+	}
 }
