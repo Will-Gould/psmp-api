@@ -70,3 +70,15 @@ type StoryLeaderboardPlayer struct {
 	PrimaryGroup string
 	Rank         int64
 }
+
+type StatLeaderboardPlayer struct {
+	Uuid              string
+	BlocksPlacedRank  int64
+	BlocksBrokenRank  int64
+	DiamondsMinedRank int64
+	TimePlayedRank    int64
+	PvpKillsRank      int64
+	DeathsRank        int64
+	MobKillsRank      int64
+	PvpKdRatioRank    int64
+}

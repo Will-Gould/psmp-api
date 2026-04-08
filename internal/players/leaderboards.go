@@ -120,6 +120,30 @@ func (ph *playerHandler) ListStatLeaderboard(w http.ResponseWriter, r *http.Requ
 	}
 }
 
+func (ph *playerHandler) GetStatRanks(w http.ResponseWriter, r *http.Request) {
+	uuid := chi.URLParam(r, "uuid")
+
+	// check if player exists
+	_, ok := ph.players[uuid]
+	if !ok {
+		json.Write(w, http.StatusNotFound, nil)
+	}
+
+	sr := responsemodels.StatLeaderboardPlayer{
+		Uuid:              uuid,
+		BlocksPlacedRank:  ph.statLeaderboards.BlocksPlacedLeaderboard[uuid].Rank,
+		BlocksBrokenRank:  ph.statLeaderboards.BlocksBrokenLeaderboard[uuid].Rank,
+		DiamondsMinedRank: ph.statLeaderboards.DiamondsMinedLeaderboard[uuid].Rank,
+		TimePlayedRank:    ph.statLeaderboards.TimePlayedLeaderboard[uuid].Rank,
+		PvpKillsRank:      ph.statLeaderboards.PvpKillsLeaderboard[uuid].Rank,
+		DeathsRank:        ph.statLeaderboards.DeathsLeaderboard[uuid].Rank,
+		MobKillsRank:      ph.statLeaderboards.MobKillsLeaderboard[uuid].Rank,
+		PvpKdRatioRank:    ph.statLeaderboards.PvpKdRatioLeaderboard[uuid].Rank,
+	}
+
+	json.Write(w, http.StatusOK, sr)
+}
+
 func (ph *playerHandler) GetStatRank(w http.ResponseWriter, r *http.Request) {
 	stat := chi.URLParam(r, "stat")
 	uuid := chi.URLParam(r, "uuid")
