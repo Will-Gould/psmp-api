@@ -24,7 +24,7 @@ type CombatOverview struct {
 	CombatScore          float64
 	PvpKdRatio           float64
 	PvpKills             int64
-	MobsKilled           int64
+	MobKills             int64
 	Deaths               int64
 	ElderGuardiansKilled int64
 	EnderDragonsKilled   int64
@@ -39,7 +39,46 @@ type StoryOverview struct {
 }
 
 type LeaderboardPlayer struct {
-	Uuid    string
-	Ranking int64
-	Value   float64
+	Uuid string
+	Rank int64
+}
+
+type CombatLeaderboardPlayer struct {
+	Uuid         string
+	Name         string
+	PrimaryGroup string
+	Rank         int64
+	PvpKdRatio   float64
+	PvpKills     int64
+	MobKills     int64
+	Deaths       int64
+}
+
+type CraftingLeaderboardPlayer struct {
+	Uuid          string
+	Name          string
+	PrimaryGroup  string
+	Rank          int64
+	BlocksPlaced  int64
+	BlocksBroken  int64
+	DiamondsMined int64
+}
+
+type StoryLeaderboardPlayer struct {
+	Uuid         string
+	Name         string
+	PrimaryGroup string
+	Rank         int64
+}
+
+type StatLeaderboardPlayer struct {
+	Uuid              string
+	BlocksPlacedRank  int64
+	BlocksBrokenRank  int64
+	DiamondsMinedRank int64
+	TimePlayedRank    int64
+	PvpKillsRank      int64
+	DeathsRank        int64
+	MobKillsRank      int64
+	PvpKdRatioRank    int64
 }

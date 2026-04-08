@@ -78,6 +78,12 @@ func (app application) mount() http.Handler {
 	r.Get("/api/players/leaderboards/combat", playerHandler.ListCombatLeaderboard)
 	r.Get("/api/players/leaderboards/crafting", playerHandler.ListCraftingLeaderboard)
 	r.Get("/api/players/leaderboards/story", playerHandler.ListStoryLeaderboard)
+	r.Get("/api/players/leaderboards/combat/{uuid}", playerHandler.GetCombatLeaderboardPlayer)
+	r.Get("/api/players/leaderboards/crafting/{uuid}", playerHandler.GetCraftingLeaderboardPlayer)
+	r.Get("/api/players/leaderboards/story/{uuid}", playerHandler.GetStoryLeaderboardPlayer)
+
+	// stat leaderboards
+	r.Get("/api/players/leaderboards/stats/{uuid}", playerHandler.GetStatRanks)
 
 	// features
 	r.Get("/api/players/leaderboards/champion-player", playerHandler.GetChampionPlayer)

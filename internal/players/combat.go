@@ -11,7 +11,7 @@ func calculateCombatScore(
 	pvpKd float64,
 	mobKd float64,
 	pvpKills float64,
-	mobsKilled float64,
+	mobKills float64,
 	deaths float64,
 	elderGuardiansKilled float64,
 	enderDragonsKilled float64,
@@ -56,9 +56,9 @@ func (ph *playerHandler) getCombatOverview(ctx context.Context, uuid string) (re
 	}
 
 	// count mobs killed
-	mobsKilled, err := ph.service.CountMobKillsByPlayer(ctx, uuid)
+	mobKills, err := ph.service.CountMobKillsByPlayer(ctx, uuid)
 	if err != nil {
-		mobsKilled = 0
+		mobKills = 0
 	}
 
 	// get pvp & mob K/D ratio
@@ -66,10 +66,10 @@ func (ph *playerHandler) getCombatOverview(ctx context.Context, uuid string) (re
 	var mobKd float64 = 0
 	if deaths == 0 {
 		pvpKd = float64(pvpKills)
-		mobKd = float64(mobsKilled)
+		mobKd = float64(mobKills)
 	} else {
 		pvpKd = float64(pvpKills) / float64(deaths)
-		mobKd = float64(mobsKilled) / float64(deaths)
+		mobKd = float64(mobKills) / float64(deaths)
 	}
 
 	// get notable mobs killed
@@ -101,7 +101,7 @@ func (ph *playerHandler) getCombatOverview(ctx context.Context, uuid string) (re
 	combatScore := calculateCombatScore(
 		pvpKd, mobKd,
 		float64(pvpKills),
-		float64(mobsKilled),
+		float64(mobKills),
 		float64(deaths),
 		float64(elderGuardiansKilled),
 		float64(enderDragonsKilled),
@@ -114,7 +114,7 @@ func (ph *playerHandler) getCombatOverview(ctx context.Context, uuid string) (re
 		CombatScore:          combatScore,
 		PvpKdRatio:           pvpKd,
 		PvpKills:             pvpKills,
-		MobsKilled:           mobsKilled,
+		MobKills:             mobKills,
 		Deaths:               deaths,
 		ElderGuardiansKilled: elderGuardiansKilled,
 		EnderDragonsKilled:   enderDragonsKilled,
