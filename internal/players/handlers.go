@@ -22,6 +22,7 @@ type playerHandler struct {
 	combatLeaderboard   map[string]responsemodels.CombatLeaderboardPlayer
 	craftingLeaderboard map[string]responsemodels.CraftingLeaderboardPlayer
 	storyLeaderboard    map[string]responsemodels.StoryLeaderboardPlayer
+	statLeaderboards    StatLeaderboards
 }
 
 func NewHandler(service Service) *playerHandler {
@@ -37,10 +38,12 @@ func NewHandler(service Service) *playerHandler {
 func (ph *playerHandler) Load(ctx context.Context, md *mapping.MappingData) {
 	ph.mu.Lock()
 	ph.loadServerLeaderboard(ctx, md)
+	ph.loadStatLeaderboards()
 	ph.formServerRanks()
 	ph.formCombatRanks()
 	ph.formCraftingRanks()
 	ph.formStoryRanks()
+	ph.formStatRanks()
 	ph.mu.Unlock()
 }
 
@@ -110,6 +113,20 @@ func (ph *playerHandler) loadServerLeaderboard(ctx context.Context, md *mapping.
 
 		ph.players[player.Uuid] = *player
 	}
+}
+
+func (ph *playerHandler) loadStatLeaderboards() {
+	sl := StatLeaderboards{
+		BlocksPlacedLeaderboard:  map[string]responsemodels.LeaderboardPlayer{},
+		BlocksBrokenLeaderboard:  map[string]responsemodels.LeaderboardPlayer{},
+		DiamondsMinedLeaderboard: map[string]responsemodels.LeaderboardPlayer{},
+		TimePlayedLeaderboard:    map[string]responsemodels.LeaderboardPlayer{},
+		PvpKillsLeaderboard:      map[string]responsemodels.LeaderboardPlayer{},
+		DeathsLeaderboard:        map[string]responsemodels.LeaderboardPlayer{},
+		MobKillsLeaderboard:      map[string]responsemodels.LeaderboardPlayer{},
+		PvpKdRatioLeaderboard:    map[string]responsemodels.LeaderboardPlayer{},
+	}
+	ph.statLeaderboards = sl
 }
 
 func (ph *playerHandler) getPlayerData(ctx context.Context, player *responsemodels.ServerPlayer, md *mapping.MappingData) {
@@ -224,4 +241,129 @@ func (ph *playerHandler) formStoryRanks() {
 		}
 		ph.storyLeaderboard[sp.Uuid] = lp
 	}
+}
+
+func (ph *playerHandler) formStatRanks() {
+	playersSlice := slices.Collect(maps.Values(ph.players))
+	tempLeaderboard := map[string]responsemodels.LeaderboardPlayer{}
+	for _, p := range ph.players {
+		tempLeaderboard[p.Uuid] = responsemodels.LeaderboardPlayer{
+			Uuid: p.Uuid,
+			Rank: 0,
+		}
+	}
+
+	// order for blocks placed ranks
+	sort.Slice(playersSlice, func(i, j int) bool {
+		if playersSlice[i].CraftingOverview.BlocksPlaced < playersSlice[j].CraftingOverview.BlocksPlaced {
+			return true
+		}
+		return false
+	})
+
+	// transfer ranks to temp leaderboard and clone to leaderboard
+	for i, p := range playersSlice {
+		lp := tempLeaderboard[p.Uuid]
+		lp.Rank = int64(i) + 1
+		tempLeaderboard[p.Uuid] = lp
+	}
+	ph.statLeaderboards.BlocksPlacedLeaderboard = maps.Clone(tempLeaderboard)
+
+	// order for blocks broken ranks
+	sort.Slice(playersSlice, func(i, j int) bool {
+		if playersSlice[i].CraftingOverview.BlocksBroken < playersSlice[j].CraftingOverview.BlocksBroken {
+			return true
+		}
+		return false
+	})
+	for i, p := range playersSlice {
+		lp := tempLeaderboard[p.Uuid]
+		lp.Rank = int64(i) + 1
+		tempLeaderboard[p.Uuid] = lp
+	}
+	ph.statLeaderboards.BlocksBrokenLeaderboard = maps.Clone(tempLeaderboard)
+
+	// order for diamonds mined ranks
+	sort.Slice(playersSlice, func(i, j int) bool {
+		if playersSlice[i].CraftingOverview.DiamondsMined < playersSlice[j].CraftingOverview.DiamondsMined {
+			return true
+		}
+		return false
+	})
+	for i, p := range playersSlice {
+		lp := tempLeaderboard[p.Uuid]
+		lp.Rank = int64(i) + 1
+		tempLeaderboard[p.Uuid] = lp
+	}
+	ph.statLeaderboards.DiamondsMinedLeaderboard = maps.Clone(tempLeaderboard)
+
+	// order for time played ranks
+	sort.Slice(playersSlice, func(i, j int) bool {
+		if playersSlice[i].CraftingOverview.TimePlayed < playersSlice[j].CraftingOverview.TimePlayed {
+			return true
+		}
+		return false
+	})
+	for i, p := range playersSlice {
+		lp := tempLeaderboard[p.Uuid]
+		lp.Rank = int64(i) + 1
+		tempLeaderboard[p.Uuid] = lp
+	}
+	ph.statLeaderboards.TimePlayedLeaderboard = maps.Clone(tempLeaderboard)
+
+	// order for pvp kills ranks
+	sort.Slice(playersSlice, func(i, j int) bool {
+		if playersSlice[i].CombatOverview.PvpKills < playersSlice[j].CombatOverview.PvpKills {
+			return true
+		}
+		return false
+	})
+	for i, p := range playersSlice {
+		lp := tempLeaderboard[p.Uuid]
+		lp.Rank = int64(i) + 1
+		tempLeaderboard[p.Uuid] = lp
+	}
+	ph.statLeaderboards.PvpKillsLeaderboard = maps.Clone(tempLeaderboard)
+
+	// order for deaths ranks
+	sort.Slice(playersSlice, func(i, j int) bool {
+		if playersSlice[i].CombatOverview.Deaths < playersSlice[j].CombatOverview.Deaths {
+			return true
+		}
+		return false
+	})
+	for i, p := range playersSlice {
+		lp := tempLeaderboard[p.Uuid]
+		lp.Rank = int64(i) + 1
+		tempLeaderboard[p.Uuid] = lp
+	}
+	ph.statLeaderboards.DeathsLeaderboard = maps.Clone(tempLeaderboard)
+
+	// order for mob kills ranks
+	sort.Slice(playersSlice, func(i, j int) bool {
+		if playersSlice[i].CombatOverview.MobKills < playersSlice[j].CombatOverview.MobKills {
+			return true
+		}
+		return false
+	})
+	for i, p := range playersSlice {
+		lp := tempLeaderboard[p.Uuid]
+		lp.Rank = int64(i) + 1
+		tempLeaderboard[p.Uuid] = lp
+	}
+	ph.statLeaderboards.MobKillsLeaderboard = maps.Clone(tempLeaderboard)
+
+	// order for pvp kd ratio ranks
+	sort.Slice(playersSlice, func(i, j int) bool {
+		if playersSlice[i].CombatOverview.PvpKdRatio < playersSlice[j].CombatOverview.PvpKdRatio {
+			return true
+		}
+		return false
+	})
+	for i, p := range playersSlice {
+		lp := tempLeaderboard[p.Uuid]
+		lp.Rank = int64(i) + 1
+		tempLeaderboard[p.Uuid] = lp
+	}
+	ph.statLeaderboards.PvpKdRatioLeaderboard = maps.Clone(tempLeaderboard)
 }
