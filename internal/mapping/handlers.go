@@ -38,7 +38,7 @@ func (mh mappingHandler) LoadMappingData(ctx context.Context, md *MappingData) {
 
 func (mh mappingHandler) GetMaterials(ctx context.Context) []repo.Material {
 	// get materials mapping
-	slog.Log(ctx, slog.LevelInfo, "Punching trees...")
+	// slog.Log(ctx, slog.LevelInfo, "Punching trees...")
 	materials, err := mh.service.ListMaterials(ctx)
 	if err != nil {
 		log.Default()
@@ -51,7 +51,7 @@ func (mh mappingHandler) GetMaterials(ctx context.Context) []repo.Material {
 func (mh mappingHandler) GetBannedMaterials(ctx context.Context, materials []repo.Material) ([]int32, []int32) {
 	bannedPlacedMaterials, bannedBrokenMaterials := []int32{}, []int32{}
 	// add banned material IDs
-	slog.Log(ctx, slog.LevelInfo, "Brewing potions...")
+	// slog.Log(ctx, slog.LevelInfo, "Brewing potions...")
 	for _, m := range materials {
 		if slices.Contains(BANNED_PLACED_MATERIALS, m.Name) {
 			bannedPlacedMaterials = append(bannedPlacedMaterials, m.ID)
@@ -65,7 +65,7 @@ func (mh mappingHandler) GetBannedMaterials(ctx context.Context, materials []rep
 
 func (mh mappingHandler) GetAdvancementMapping(ctx context.Context) []repo.PsmpstatsAdvancement {
 	// get advancement mapping
-	slog.Log(ctx, slog.LevelInfo, "Shearing sheep...")
+	// slog.Log(ctx, slog.LevelInfo, "Shearing sheep...")
 	advancementMap, err := mh.service.ListAdvancements(ctx)
 	if err != nil {
 		slog.Log(ctx, slog.LevelError, "Failed to get advancement mapping")
@@ -76,7 +76,7 @@ func (mh mappingHandler) GetAdvancementMapping(ctx context.Context) []repo.Psmps
 
 func (mh mappingHandler) GetMobMapping(ctx context.Context) []repo.PsmpstatsMob {
 	// get mob mapping
-	slog.Log(ctx, slog.LevelInfo, "Killing zombies...")
+	// slog.Log(ctx, slog.LevelInfo, "Killing zombies...")
 	mobMap, err := mh.service.ListMobs(ctx)
 	if err != nil {
 		slog.Log(ctx, slog.LevelError, "Failed to get mob mapping")
@@ -87,7 +87,7 @@ func (mh mappingHandler) GetMobMapping(ctx context.Context) []repo.PsmpstatsMob 
 
 func (mh mappingHandler) GetDeathCauseMapping(ctx context.Context) []repo.PsmpstatsCause {
 	// get death cause mapping
-	slog.Log(ctx, slog.LevelInfo, "Jumping over ravines...")
+	// slog.Log(ctx, slog.LevelInfo, "Jumping over ravines...")
 	causeMap, err := mh.service.ListCausesOfDeath(ctx)
 	if err != nil {
 		slog.Log(ctx, slog.LevelError, "Failed to get causes of death mapping")
