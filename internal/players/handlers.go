@@ -262,11 +262,7 @@ func (ph *playerHandler) formStatRanks() {
 	})
 
 	// transfer ranks to temp leaderboard and clone to leaderboard
-	for i, p := range playersSlice {
-		lp := tempLeaderboard[p.Uuid]
-		lp.Rank = int64(i) + 1
-		tempLeaderboard[p.Uuid] = lp
-	}
+	transferRanks(playersSlice, tempLeaderboard)
 	ph.statLeaderboards.BlocksPlacedLeaderboard = maps.Clone(tempLeaderboard)
 
 	// order for blocks broken ranks
@@ -276,11 +272,7 @@ func (ph *playerHandler) formStatRanks() {
 		}
 		return false
 	})
-	for i, p := range playersSlice {
-		lp := tempLeaderboard[p.Uuid]
-		lp.Rank = int64(i) + 1
-		tempLeaderboard[p.Uuid] = lp
-	}
+	transferRanks(playersSlice, tempLeaderboard)
 	ph.statLeaderboards.BlocksBrokenLeaderboard = maps.Clone(tempLeaderboard)
 
 	// order for diamonds mined ranks
@@ -290,11 +282,7 @@ func (ph *playerHandler) formStatRanks() {
 		}
 		return false
 	})
-	for i, p := range playersSlice {
-		lp := tempLeaderboard[p.Uuid]
-		lp.Rank = int64(i) + 1
-		tempLeaderboard[p.Uuid] = lp
-	}
+	transferRanks(playersSlice, tempLeaderboard)
 	ph.statLeaderboards.DiamondsMinedLeaderboard = maps.Clone(tempLeaderboard)
 
 	// order for time played ranks
@@ -304,11 +292,7 @@ func (ph *playerHandler) formStatRanks() {
 		}
 		return false
 	})
-	for i, p := range playersSlice {
-		lp := tempLeaderboard[p.Uuid]
-		lp.Rank = int64(i) + 1
-		tempLeaderboard[p.Uuid] = lp
-	}
+	transferRanks(playersSlice, tempLeaderboard)
 	ph.statLeaderboards.TimePlayedLeaderboard = maps.Clone(tempLeaderboard)
 
 	// order for pvp kills ranks
@@ -318,11 +302,7 @@ func (ph *playerHandler) formStatRanks() {
 		}
 		return false
 	})
-	for i, p := range playersSlice {
-		lp := tempLeaderboard[p.Uuid]
-		lp.Rank = int64(i) + 1
-		tempLeaderboard[p.Uuid] = lp
-	}
+	transferRanks(playersSlice, tempLeaderboard)
 	ph.statLeaderboards.PvpKillsLeaderboard = maps.Clone(tempLeaderboard)
 
 	// order for deaths ranks
@@ -332,11 +312,7 @@ func (ph *playerHandler) formStatRanks() {
 		}
 		return false
 	})
-	for i, p := range playersSlice {
-		lp := tempLeaderboard[p.Uuid]
-		lp.Rank = int64(i) + 1
-		tempLeaderboard[p.Uuid] = lp
-	}
+	transferRanks(playersSlice, tempLeaderboard)
 	ph.statLeaderboards.DeathsLeaderboard = maps.Clone(tempLeaderboard)
 
 	// order for mob kills ranks
@@ -346,11 +322,7 @@ func (ph *playerHandler) formStatRanks() {
 		}
 		return false
 	})
-	for i, p := range playersSlice {
-		lp := tempLeaderboard[p.Uuid]
-		lp.Rank = int64(i) + 1
-		tempLeaderboard[p.Uuid] = lp
-	}
+	transferRanks(playersSlice, tempLeaderboard)
 	ph.statLeaderboards.MobKillsLeaderboard = maps.Clone(tempLeaderboard)
 
 	// order for pvp kd ratio ranks
@@ -360,10 +332,14 @@ func (ph *playerHandler) formStatRanks() {
 		}
 		return false
 	})
-	for i, p := range playersSlice {
-		lp := tempLeaderboard[p.Uuid]
-		lp.Rank = int64(i) + 1
-		tempLeaderboard[p.Uuid] = lp
-	}
+	transferRanks(playersSlice, tempLeaderboard)
 	ph.statLeaderboards.PvpKdRatioLeaderboard = maps.Clone(tempLeaderboard)
+}
+
+func transferRanks(players []responsemodels.ServerPlayer, l map[string]responsemodels.LeaderboardPlayer) {
+	for i, p := range players {
+		lp := l[p.Uuid]
+		lp.Rank = int64(i) + 1
+		l[p.Uuid] = lp
+	}
 }
