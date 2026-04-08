@@ -53,3 +53,15 @@ FROM
   sessions
 WHERE
   user = ?;
+
+-- name: GroupCountBlocksPlacedByUser :many
+SELECT
+  type, COUNT(*) AS total_placed
+FROM
+  blocks
+WHERE
+  user = ?
+AND
+  action = 1
+GROUP BY
+  type;

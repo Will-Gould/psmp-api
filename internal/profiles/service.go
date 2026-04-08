@@ -17,6 +17,7 @@ type Service interface {
 	FindLuckpermsPlayer(ctx context.Context, uuid string) (repo.LuckpermsPlayer, error)
 	ListAdvancementsByPlayer(ctx context.Context, uuid string) ([]repo.PsmpstatsAdvancement, error)
 	ListMobKillsByUuid(ctx context.Context, uuid string) ([]repo.PsmpstatsMobKill, error)
+	GroupCountBlocksByUser(ctx context.Context, id int32, action int32, banned []int32) ([]repo.GroupCountBlocksPlacedByUserRow, error)
 }
 
 type svc struct {
@@ -90,4 +91,8 @@ func (s *svc) ListMobKillsByUuid(ctx context.Context, uuid string) ([]repo.Psmps
 // ListSessionDataByUser implements [Service].
 func (s *svc) ListSessionDataByUser(ctx context.Context, id int32) ([]repo.Session, error) {
 	return s.repo.ListSessionDataByUser(ctx, id)
+}
+
+func (s *svc) GroupCountBlocksByUser(ctx context.Context, id int32, action int32, banned []int32) ([]repo.GroupCountBlocksPlacedByUserRow, error) {
+	return s.repo.GroupCountBlocksByUser(ctx, id, action, banned)
 }

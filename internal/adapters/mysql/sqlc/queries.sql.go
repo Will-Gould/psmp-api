@@ -41,6 +41,47 @@ func (q *Queries) FindLuckpermsPlayerByUuid(ctx context.Context, uuid string) (L
 	return i, err
 }
 
+const groupCountBlocksPlacedByUser = `-- name: GroupCountBlocksPlacedByUser :many
+SELECT
+  type, COUNT(*) AS total_placed
+FROM
+  blocks
+WHERE
+  user = ?
+AND
+  action = 1
+GROUP BY
+  type
+`
+
+type GroupCountBlocksPlacedByUserRow struct {
+	Type        int32 `json:"type"`
+	TotalPlaced int64 `json:"total_placed"`
+}
+
+func (q *Queries) GroupCountBlocksPlacedByUser(ctx context.Context, user int32) ([]GroupCountBlocksPlacedByUserRow, error) {
+	rows, err := q.db.QueryContext(ctx, groupCountBlocksPlacedByUser, user)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GroupCountBlocksPlacedByUserRow
+	for rows.Next() {
+		var i GroupCountBlocksPlacedByUserRow
+		if err := rows.Scan(&i.Type, &i.TotalPlaced); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listBlocksBrokenByUser = `-- name: ListBlocksBrokenByUser :many
 SELECT
   time, user, level, x, y, z, type, action

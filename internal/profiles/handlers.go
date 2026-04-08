@@ -3,10 +3,12 @@ package profiles
 import (
 	"log/slog"
 	"net/http"
+	"slices"
 	"sort"
 	"time"
 
 	"github.com/Will-Gould/psmp-api/internal/json"
+	"github.com/Will-Gould/psmp-api/internal/mapping"
 	responsemodels "github.com/Will-Gould/psmp-api/internal/response_models"
 	"github.com/go-chi/chi"
 )
@@ -14,12 +16,14 @@ import (
 const DATE_FORMAT = "2006-01-02"
 
 type profileHandler struct {
-	service Service
+	service     Service
+	mappingData *mapping.MappingData
 }
 
-func NewHandler(service Service) *profileHandler {
+func NewHandler(service Service, md *mapping.MappingData) *profileHandler {
 	return &profileHandler{
-		service: service,
+		service:     service,
+		mappingData: md,
 	}
 }
 
@@ -80,4 +84,60 @@ func (ph *profileHandler) GetMobKillChartData(w http.ResponseWriter, r *http.Req
 	}
 
 	json.Write(w, http.StatusOK, chart)
+}
+
+func (ph *profileHandler) GetBlocksBrokenPieChartData(w http.ResponseWriter, r *http.Request) {
+	uuid := chi.URLParam(r, "uuid")
+	data := []responsemodels.BlockChartItem{}
+
+	glUser, err := ph.service.FindGriefLoggerUser(r.Context(), uuid)
+	if err != nil {
+		json.Write(w, http.StatusNotFound, nil)
+		return
+	}
+
+	blocksBroken, err := ph.service.GroupCountBlocksByUser(r.Context(), glUser.ID, mapping.BLOCK_BROKEN_ACTION, ph.mappingData.BannedBrokenMaterials)
+
+	// transform into materials
+	for _, b := range blocksBroken {
+		name := ph.findMaterialName(b.Type)
+		data = append(data, responsemodels.BlockChartItem{
+			Block: name,
+			Value: b.TotalPlaced,
+		})
+	}
+
+	// consolidate into 'others' category
+	if len(data) > 6 {
+		sort.Slice(data, func(i, j int) bool {
+			if data[i].Value > data[j].Value {
+				return true
+			}
+			return false
+		})
+
+		data[5].Block = "others"
+
+		for i := 6; i < len(data); i++ {
+			data[5].Value += data[i].Value
+		}
+
+		data = slices.Delete(data, 6, len(data))
+	}
+
+	blockChart := responsemodels.BlockChart{
+		Title:     "Blocks Broken",
+		ChartData: data,
+	}
+
+	json.Write(w, http.StatusOK, blockChart)
+}
+
+func (ph *profileHandler) findMaterialName(id int32) string {
+	for _, m := range ph.mappingData.Materials {
+		if id == m.ID {
+			return m.Name
+		}
+	}
+	return ""
 }
