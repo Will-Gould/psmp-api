@@ -69,7 +69,7 @@ func (app application) mount() http.Handler {
 
 	// Start profile service & handler
 	profileService := profiles.NewService(repo)
-	profileHandler := profiles.NewHandler(profileService)
+	profileHandler := profiles.NewHandler(profileService, &mappingData)
 
 	// Map endpoints
 	// players
@@ -92,6 +92,7 @@ func (app application) mount() http.Handler {
 
 	// profiles
 	r.Get("/api/profiles/{uuid}/daily-mob-kill-chart", profileHandler.GetMobKillChartData)
+	r.Get("/api/profiles/{uuid}/blocks-broken-pie-chart", profileHandler.GetBlocksBrokenPieChartData)
 
 	return r
 }

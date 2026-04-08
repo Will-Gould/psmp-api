@@ -37,3 +37,54 @@ func (q *Queries) CountBlocksByUser(ctx context.Context, user int32, action int3
 	err := row.Scan(&count)
 	return count, err
 }
+
+const GroupCountBlocksByUser = `-- name: GroupCountBlocksByUSer :many
+SELECT
+  type, COUNT(*) AS total_placed
+FROM
+  blocks
+WHERE
+  user = ?
+AND
+  action = ?
+`
+
+func (q *Queries) GroupCountBlocksByUser(ctx context.Context, user int32, action int32, banned []int32) ([]GroupCountBlocksPlacedByUserRow, error) {
+	// create args
+	args := []any{}
+	args = append(args, user)
+	args = append(args, action)
+	for i := range banned {
+		args = append(args, banned[i])
+	}
+
+	// build dynamic query
+	var query strings.Builder
+	query.WriteString(GroupCountBlocksByUser)
+	for range banned {
+		query.WriteString(" AND type != ?")
+	}
+
+	query.WriteString(" GROUP BY type")
+
+	rows, err := q.db.QueryContext(ctx, query.String(), args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GroupCountBlocksPlacedByUserRow
+	for rows.Next() {
+		var i GroupCountBlocksPlacedByUserRow
+		if err := rows.Scan(&i.Type, &i.TotalPlaced); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

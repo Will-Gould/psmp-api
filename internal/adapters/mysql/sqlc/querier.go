@@ -16,6 +16,7 @@ type Querier interface {
 	FindGriefLoggerUserByUuid(ctx context.Context, uuid string) (User, error)
 	FindLuckpermsPlayerByUuid(ctx context.Context, uuid string) (LuckpermsPlayer, error)
 	FindPsmpstatsPlayerByUuid(ctx context.Context, uuid string) (PsmpstatsPlayer, error)
+	GroupCountBlocksPlacedByUser(ctx context.Context, user int32) ([]GroupCountBlocksPlacedByUserRow, error)
 	ListAdvancements(ctx context.Context) ([]PsmpstatsAdvancement, error)
 	ListAdvancementsByUuid(ctx context.Context, playerUuid string) ([]ListAdvancementsByUuidRow, error)
 	ListBlocksBrokenByUser(ctx context.Context, user int32) ([]Block, error)
@@ -32,6 +33,7 @@ type Querier interface {
 
 	//dynamic queries
 	CountBlocksByUser(ctx context.Context, user int32, action int32, banned []int32) (int64, error)
+	GroupCountBlocksByUser(ctx context.Context, user int32, action int32, banned []int32) ([]GroupCountBlocksPlacedByUserRow, error)
 }
 
 var _ Querier = (*Queries)(nil)
