@@ -11,3 +11,13 @@ type SingleDailyChart struct {
 	TimeDivision string
 	Trend        float64
 }
+
+type BlockChartItem struct {
+	Block string
+	Value int64
+}
+
+type BlockChart struct {
+	Title     string
+	ChartData []BlockChartItem
+}
