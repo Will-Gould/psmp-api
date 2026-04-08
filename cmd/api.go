@@ -10,6 +10,7 @@ import (
 	repo "github.com/Will-Gould/psmp-api/internal/adapters/mysql/sqlc"
 	"github.com/Will-Gould/psmp-api/internal/mapping"
 	"github.com/Will-Gould/psmp-api/internal/players"
+	"github.com/Will-Gould/psmp-api/internal/profiles"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 )
@@ -66,11 +67,25 @@ func (app application) mount() http.Handler {
 		}
 	}()
 
+	// Start profile service & handler
+	profileService := profiles.NewService(repo)
+	profileHandler := profiles.NewHandler(profileService)
+
+	// Map endpoints
+	// players
 	r.Get("/api/players/{uuid}", playerHandler.GetServerPlayer)
 	r.Get("/api/players/leaderboards/server", playerHandler.ListServerLeaderboard)
 	r.Get("/api/players/leaderboards/combat", playerHandler.ListCombatLeaderboard)
 	r.Get("/api/players/leaderboards/crafting", playerHandler.ListCraftingLeaderboard)
 	r.Get("/api/players/leaderboards/story", playerHandler.ListStoryLeaderboard)
+
+	// features
+	r.Get("/api/players/leaderboards/champion-player", playerHandler.GetChampionPlayer)
+	r.Get("/api/players/leaderboards/most-dangerous-player", playerHandler.GetMostDangerousPlayer)
+	r.Get("/api/players/leaderboards/biggest-builder", playerHandler.GetBiggestBuilder)
+
+	// profiles
+	r.Get("/api/profiles/{uuid}/daily-mob-kill-chart", profileHandler.GetMobKillChartData)
 
 	return r
 }

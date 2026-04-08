@@ -70,6 +70,40 @@ func (ph *playerHandler) GetServerPlayer(w http.ResponseWriter, r *http.Request)
 	}
 }
 
+func (ph *playerHandler) GetChampionPlayer(w http.ResponseWriter, r *http.Request) {
+	for _, p := range ph.players {
+		if p.ServerRank == 1 {
+			json.Write(w, http.StatusOK, p)
+			return
+		}
+	}
+	json.Write(w, http.StatusInternalServerError, nil)
+}
+
+func (ph *playerHandler) GetMostDangerousPlayer(w http.ResponseWriter, r *http.Request) {
+	kdRanking := slices.Collect(maps.Values(ph.players))
+	sort.Slice(kdRanking, func(i, j int) bool {
+		if kdRanking[i].CombatOverview.PvpKdRatio < kdRanking[j].CombatOverview.PvpKdRatio {
+			return true
+		}
+		return false
+	})
+
+	json.Write(w, http.StatusOK, kdRanking[0])
+}
+
+func (ph *playerHandler) GetBiggestBuilder(w http.ResponseWriter, r *http.Request) {
+	buildRanking := slices.Collect(maps.Values(ph.players))
+	sort.Slice(buildRanking, func(i, j int) bool {
+		if buildRanking[i].CraftingOverview.BlocksPlaced < buildRanking[j].CraftingOverview.BlocksPlaced {
+			return true
+		}
+		return false
+	})
+
+	json.Write(w, http.StatusOK, buildRanking[0])
+}
+
 func (ph *playerHandler) loadServerLeaderboard(ctx context.Context, md *mapping.MappingData) {
 	luckpermsPlayers, err := ph.service.ListLuckpermsPlayers(ctx)
 	if err != nil {
