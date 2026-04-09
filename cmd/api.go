@@ -93,6 +93,7 @@ func (app application) mount() http.Handler {
 	// profiles
 	r.Get("/api/profiles/{uuid}/daily-mob-kill-chart", profileHandler.GetMobKillChartData)
 	r.Get("/api/profiles/{uuid}/blocks-broken-pie-chart", profileHandler.GetBlocksBrokenPieChartData)
+	r.Get("/api/profiles/{uuid}/total-blocks-chart", profileHandler.GetTotalBlocksChart)
 
 	return r
 }
