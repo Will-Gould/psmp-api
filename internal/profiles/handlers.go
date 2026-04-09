@@ -1,7 +1,6 @@
 package profiles
 
 import (
-	"log"
 	"log/slog"
 	"net/http"
 	"slices"
@@ -166,7 +165,6 @@ func (ph *profileHandler) GetTotalBlocksChart(w http.ResponseWriter, r *http.Req
 	earliestMidnight := firstBlockTime.Truncate(24 * time.Hour)
 	nextDay := time.Now().AddDate(0, 0, 1).Local()
 	nextMidnight := nextDay.Truncate(24 * time.Hour)
-	log.Default().Printf("First Time: %v", earliestMidnight)
 	// initialise value for each date between now & first block action
 	for d := earliestMidnight; !d.After(nextMidnight); d = d.AddDate(0, 0, 1) {
 		dateString := d.Local().Format(DATE_FORMAT)
