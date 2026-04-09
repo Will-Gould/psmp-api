@@ -94,6 +94,7 @@ func (app application) mount() http.Handler {
 	r.Get("/api/profiles/{uuid}/daily-mob-kill-chart", profileHandler.GetMobKillChartData)
 	r.Get("/api/profiles/{uuid}/blocks-broken-pie-chart", profileHandler.GetBlocksBrokenPieChartData)
 	r.Get("/api/profiles/{uuid}/total-blocks-chart", profileHandler.GetTotalBlocksChart)
+	r.Get("/api/profiles/{uuid}/deaths-chart", profileHandler.GetDeathsChart)
 
 	return r
 }
