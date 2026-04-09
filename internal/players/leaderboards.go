@@ -23,7 +23,9 @@ type StatLeaderboards struct {
 }
 
 func (ph *playerHandler) ListServerLeaderboard(w http.ResponseWriter, r *http.Request) {
+	ph.dataStore.Mu.RLock()
 	lb := slices.Collect(maps.Values(ph.dataStore.Players))
+	ph.dataStore.Mu.RUnlock()
 	sort.Slice(lb, func(i, j int) bool {
 		if lb[i].ServerRank < lb[j].ServerRank {
 			return true

@@ -45,26 +45,32 @@ func (ph *playerHandler) Load(ctx context.Context) {
 
 func (ph *playerHandler) GetServerPlayer(w http.ResponseWriter, r *http.Request) {
 	uuid := chi.URLParam(r, "uuid")
+	ph.dataStore.Mu.RLock()
 	sp, ok := ph.dataStore.Players[uuid]
 	if ok {
 		json.Write(w, http.StatusOK, sp)
 	} else {
 		json.Write(w, http.StatusNotFound, nil)
 	}
+	ph.dataStore.Mu.RUnlock()
 }
 
 func (ph *playerHandler) GetChampionPlayer(w http.ResponseWriter, r *http.Request) {
+	ph.dataStore.Mu.RLock()
 	for _, p := range ph.dataStore.Players {
 		if p.ServerRank == 1 {
 			json.Write(w, http.StatusOK, p)
 			return
 		}
 	}
+	ph.dataStore.Mu.RLock()
 	json.Write(w, http.StatusInternalServerError, nil)
 }
 
 func (ph *playerHandler) GetMostDangerousPlayer(w http.ResponseWriter, r *http.Request) {
+	ph.dataStore.Mu.RLock()
 	kdRanking := slices.Collect(maps.Values(ph.dataStore.Players))
+	ph.dataStore.Mu.RUnlock()
 	sort.Slice(kdRanking, func(i, j int) bool {
 		if kdRanking[i].CombatOverview.PvpKdRatio < kdRanking[j].CombatOverview.PvpKdRatio {
 			return true
@@ -76,7 +82,9 @@ func (ph *playerHandler) GetMostDangerousPlayer(w http.ResponseWriter, r *http.R
 }
 
 func (ph *playerHandler) GetBiggestBuilder(w http.ResponseWriter, r *http.Request) {
+	ph.dataStore.Mu.RLock()
 	buildRanking := slices.Collect(maps.Values(ph.dataStore.Players))
+	ph.dataStore.Mu.RUnlock()
 	sort.Slice(buildRanking, func(i, j int) bool {
 		if buildRanking[i].CraftingOverview.BlocksPlaced < buildRanking[j].CraftingOverview.BlocksPlaced {
 			return true
