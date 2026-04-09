@@ -23,7 +23,7 @@ type StatLeaderboards struct {
 }
 
 func (ph *playerHandler) ListServerLeaderboard(w http.ResponseWriter, r *http.Request) {
-	lb := slices.Collect(maps.Values(ph.players))
+	lb := slices.Collect(maps.Values(ph.dataStore.Players))
 	sort.Slice(lb, func(i, j int) bool {
 		if lb[i].ServerRank < lb[j].ServerRank {
 			return true
@@ -124,7 +124,7 @@ func (ph *playerHandler) GetStatRanks(w http.ResponseWriter, r *http.Request) {
 	uuid := chi.URLParam(r, "uuid")
 
 	// check if player exists
-	_, ok := ph.players[uuid]
+	_, ok := ph.dataStore.Players[uuid]
 	if !ok {
 		json.Write(w, http.StatusNotFound, nil)
 	}
@@ -149,7 +149,7 @@ func (ph *playerHandler) GetStatRank(w http.ResponseWriter, r *http.Request) {
 	uuid := chi.URLParam(r, "uuid")
 
 	// check if player exists
-	_, ok := ph.players[uuid]
+	_, ok := ph.dataStore.Players[uuid]
 	if !ok {
 		json.Write(w, http.StatusNotFound, nil)
 	}

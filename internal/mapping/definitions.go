@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	repo "github.com/Will-Gould/psmp-api/internal/adapters/mysql/sqlc"
+	responsemodels "github.com/Will-Gould/psmp-api/internal/response_models"
 )
 
 const BLOCK_BROKEN_ACTION = 0
@@ -145,4 +146,10 @@ type MappingData struct {
 	CauseMapping          []repo.PsmpstatsCause
 	MobMapping            []repo.PsmpstatsMob
 	AdvancementMapping    []repo.PsmpstatsAdvancement
+}
+
+type DataStore struct {
+	Mu          sync.RWMutex
+	Players     map[string]responsemodels.ServerPlayer
+	MappingData MappingData
 }
