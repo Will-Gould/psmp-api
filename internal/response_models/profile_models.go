@@ -12,10 +12,9 @@ type DoubleDailyChartItem struct {
 }
 
 type SingleDailyChart struct {
-	Title        string
-	ChartData    []SingleDailyChartItem
-	TimeDivision string
-	Trend        float64
+	Title     string
+	ChartData []SingleDailyChartItem
+	Trend     float64
 }
 
 type DoubleDailyChart struct {

@@ -77,10 +77,9 @@ func (ph *profileHandler) GetMobKillChartData(w http.ResponseWriter, r *http.Req
 	}
 
 	chart := responsemodels.SingleDailyChart{
-		Title:        "Mob Kills",
-		ChartData:    data,
-		TimeDivision: "days",
-		Trend:        trend,
+		Title:     "Mob Kills",
+		ChartData: data,
+		Trend:     trend,
 	}
 
 	json.Write(w, http.StatusOK, chart)
@@ -204,6 +203,64 @@ func (ph *profileHandler) GetTotalBlocksChart(w http.ResponseWriter, r *http.Req
 		Title:     "Total Blocks Placed vs Broken",
 		ChartData: data,
 		Trend:     0,
+	}
+
+	json.Write(w, http.StatusOK, chart)
+}
+
+func (ph *profileHandler) GetDeathsChart(w http.ResponseWriter, r *http.Request) {
+	uuid := chi.URLParam(r, "uuid")
+	data := []responsemodels.SingleDailyChartItem{}
+	deaths, err := ph.service.ListDeathsByPlayer(r.Context(), uuid)
+	if err != nil {
+		slog.Log(r.Context(), slog.LevelError, err.Error())
+		return
+	}
+	sort.Slice(deaths, func(i, j int) bool {
+		if deaths[i].Time < deaths[j].Time {
+			return true
+		}
+		return false
+	})
+
+	firstDeathTime := time.Unix(int64(deaths[0].Time), 0).Local()
+	earliestMidnight := firstDeathTime.Truncate(24 * time.Hour)
+	nextDay := time.Now().AddDate(0, 0, 1).Local()
+	nextMidnight := nextDay.Truncate(24 * time.Hour)
+	// initialise value for each date between now and first kill
+	for d := earliestMidnight; !d.After(nextMidnight); d = d.AddDate(0, 0, 1) {
+		dateString := d.Local().Format(DATE_FORMAT)
+		data = append(data, responsemodels.SingleDailyChartItem{
+			Date:  dateString,
+			Value: 0,
+		})
+	}
+
+	for _, k := range deaths {
+		deathDate := time.Unix(int64(k.Time), 0).Local().Format(DATE_FORMAT)
+		for i, d := range data {
+			if d.Date == deathDate {
+				data[i].Value += 1
+				continue
+			}
+		}
+	}
+
+	// calculate trend over last two intervals
+	var trend float64 = 0
+	if len(data) > 1 {
+		cur := data[len(data)-1].Value
+		base := data[len(data)-2].Value
+
+		if base > 0 {
+			trend = ((float64(cur) - float64(base)) / float64(base)) * 100
+		}
+	}
+
+	chart := responsemodels.SingleDailyChart{
+		Title:     "Deaths",
+		ChartData: data,
+		Trend:     trend,
 	}
 
 	json.Write(w, http.StatusOK, chart)

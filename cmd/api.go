@@ -57,7 +57,7 @@ func (app application) mount() http.Handler {
 
 	// schedule player list & leaderboard updates
 	go func() {
-		ticker := time.NewTicker(1 * time.Minute)
+		ticker := time.NewTicker(10 * time.Minute)
 		for range ticker.C {
 			slog.Log(context.Background(), slog.LevelInfo, "Updating mapping data & leaderboard...")
 			dataStore.Mu.Lock()
@@ -94,6 +94,7 @@ func (app application) mount() http.Handler {
 	r.Get("/api/profiles/{uuid}/daily-mob-kill-chart", profileHandler.GetMobKillChartData)
 	r.Get("/api/profiles/{uuid}/blocks-broken-pie-chart", profileHandler.GetBlocksBrokenPieChartData)
 	r.Get("/api/profiles/{uuid}/total-blocks-chart", profileHandler.GetTotalBlocksChart)
+	r.Get("/api/profiles/{uuid}/deaths-chart", profileHandler.GetDeathsChart)
 
 	return r
 }
