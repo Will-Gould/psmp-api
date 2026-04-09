@@ -60,10 +60,11 @@ func (ph *playerHandler) GetChampionPlayer(w http.ResponseWriter, r *http.Reques
 	for _, p := range ph.dataStore.Players {
 		if p.ServerRank == 1 {
 			json.Write(w, http.StatusOK, p)
+			ph.dataStore.Mu.RUnlock()
 			return
 		}
 	}
-	ph.dataStore.Mu.RLock()
+	ph.dataStore.Mu.RUnlock()
 	json.Write(w, http.StatusInternalServerError, nil)
 }
 
