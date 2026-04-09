@@ -34,6 +34,7 @@ type Querier interface {
 	//dynamic queries
 	CountBlocksByUser(ctx context.Context, user int32, action int32, banned []int32) (int64, error)
 	GroupCountBlocksByUser(ctx context.Context, user int32, action int32, banned []int32) ([]GroupCountBlocksPlacedByUserRow, error)
+	ListBlocksByUser(ctx context.Context, user int32, action int32, banned []int32) ([]Block, error)
 }
 
 var _ Querier = (*Queries)(nil)
