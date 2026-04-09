@@ -16,14 +16,14 @@ import (
 const DATE_FORMAT = "2006-01-02"
 
 type profileHandler struct {
-	service     Service
-	mappingData *mapping.MappingData
+	service   Service
+	dataStore *mapping.DataStore
 }
 
-func NewHandler(service Service, md *mapping.MappingData) *profileHandler {
+func NewHandler(service Service, ds *mapping.DataStore) *profileHandler {
 	return &profileHandler{
-		service:     service,
-		mappingData: md,
+		service:   service,
+		dataStore: ds,
 	}
 }
 
@@ -96,7 +96,7 @@ func (ph *profileHandler) GetBlocksBrokenPieChartData(w http.ResponseWriter, r *
 		return
 	}
 
-	blocksBroken, err := ph.service.GroupCountBlocksByUser(r.Context(), glUser.ID, mapping.BLOCK_BROKEN_ACTION, ph.mappingData.BannedBrokenMaterials)
+	blocksBroken, err := ph.service.GroupCountBlocksByUser(r.Context(), glUser.ID, mapping.BLOCK_BROKEN_ACTION, ph.dataStore.MappingData.BannedBrokenMaterials)
 
 	// transform into materials
 	for _, b := range blocksBroken {
@@ -134,7 +134,7 @@ func (ph *profileHandler) GetBlocksBrokenPieChartData(w http.ResponseWriter, r *
 }
 
 func (ph *profileHandler) findMaterialName(id int32) string {
-	for _, m := range ph.mappingData.Materials {
+	for _, m := range ph.dataStore.MappingData.Materials {
 		if id == m.ID {
 			return m.Name
 		}

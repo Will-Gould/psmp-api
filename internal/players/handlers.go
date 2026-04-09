@@ -16,25 +16,25 @@ import (
 
 type playerHandler struct {
 	service             Service
-	players             map[string]responsemodels.ServerPlayer
+	dataStore           *mapping.DataStore
 	combatLeaderboard   map[string]responsemodels.CombatLeaderboardPlayer
 	craftingLeaderboard map[string]responsemodels.CraftingLeaderboardPlayer
 	storyLeaderboard    map[string]responsemodels.StoryLeaderboardPlayer
 	statLeaderboards    StatLeaderboards
 }
 
-func NewHandler(service Service, players map[string]responsemodels.ServerPlayer) *playerHandler {
+func NewHandler(service Service, ds *mapping.DataStore) *playerHandler {
 	return &playerHandler{
 		service:             service,
-		players:             players,
+		dataStore:           ds,
 		craftingLeaderboard: make(map[string]responsemodels.CraftingLeaderboardPlayer),
 		combatLeaderboard:   make(map[string]responsemodels.CombatLeaderboardPlayer),
 		storyLeaderboard:    make(map[string]responsemodels.StoryLeaderboardPlayer),
 	}
 }
 
-func (ph *playerHandler) Load(ctx context.Context, md *mapping.MappingData) {
-	ph.loadServerLeaderboard(ctx, md)
+func (ph *playerHandler) Load(ctx context.Context) {
+	ph.loadServerLeaderboard(ctx, &ph.dataStore.MappingData)
 	ph.loadStatLeaderboards()
 	ph.formServerRanks()
 	ph.formCombatRanks()
@@ -45,7 +45,7 @@ func (ph *playerHandler) Load(ctx context.Context, md *mapping.MappingData) {
 
 func (ph *playerHandler) GetServerPlayer(w http.ResponseWriter, r *http.Request) {
 	uuid := chi.URLParam(r, "uuid")
-	sp, ok := ph.players[uuid]
+	sp, ok := ph.dataStore.Players[uuid]
 	if ok {
 		json.Write(w, http.StatusOK, sp)
 	} else {
@@ -54,7 +54,7 @@ func (ph *playerHandler) GetServerPlayer(w http.ResponseWriter, r *http.Request)
 }
 
 func (ph *playerHandler) GetChampionPlayer(w http.ResponseWriter, r *http.Request) {
-	for _, p := range ph.players {
+	for _, p := range ph.dataStore.Players {
 		if p.ServerRank == 1 {
 			json.Write(w, http.StatusOK, p)
 			return
@@ -64,7 +64,7 @@ func (ph *playerHandler) GetChampionPlayer(w http.ResponseWriter, r *http.Reques
 }
 
 func (ph *playerHandler) GetMostDangerousPlayer(w http.ResponseWriter, r *http.Request) {
-	kdRanking := slices.Collect(maps.Values(ph.players))
+	kdRanking := slices.Collect(maps.Values(ph.dataStore.Players))
 	sort.Slice(kdRanking, func(i, j int) bool {
 		if kdRanking[i].CombatOverview.PvpKdRatio < kdRanking[j].CombatOverview.PvpKdRatio {
 			return true
@@ -76,7 +76,7 @@ func (ph *playerHandler) GetMostDangerousPlayer(w http.ResponseWriter, r *http.R
 }
 
 func (ph *playerHandler) GetBiggestBuilder(w http.ResponseWriter, r *http.Request) {
-	buildRanking := slices.Collect(maps.Values(ph.players))
+	buildRanking := slices.Collect(maps.Values(ph.dataStore.Players))
 	sort.Slice(buildRanking, func(i, j int) bool {
 		if buildRanking[i].CraftingOverview.BlocksPlaced < buildRanking[j].CraftingOverview.BlocksPlaced {
 			return true
@@ -107,7 +107,7 @@ func (ph *playerHandler) loadServerLeaderboard(ctx context.Context, md *mapping.
 		}
 		ph.getPlayerData(ctx, player, md)
 
-		ph.players[player.Uuid] = *player
+		ph.dataStore.Players[player.Uuid] = *player
 	}
 }
 
@@ -155,7 +155,7 @@ func (ph *playerHandler) getPlayerData(ctx context.Context, player *responsemode
 
 func (ph *playerHandler) formServerRanks() {
 	// get player slice and sort by score
-	l := slices.Collect(maps.Values(ph.players))
+	l := slices.Collect(maps.Values(ph.dataStore.Players))
 	sort.Slice(l, func(i, j int) bool {
 		if l[i].Score < l[j].Score {
 			return true
@@ -163,15 +163,16 @@ func (ph *playerHandler) formServerRanks() {
 		return false
 	})
 	for i, sp := range l {
-		lp := ph.players[sp.Uuid]
+
+		lp := ph.dataStore.Players[sp.Uuid]
 		lp.ServerRank = int64(i) + 1
-		ph.players[sp.Uuid] = lp
+		ph.dataStore.Players[sp.Uuid] = lp
 	}
 }
 
 func (ph *playerHandler) formCombatRanks() {
 	// copy player to slice and sort by combat score
-	l := slices.Collect(maps.Values(ph.players))
+	l := slices.Collect(maps.Values(ph.dataStore.Players))
 	sort.Slice(l, func(i, j int) bool {
 		if l[i].CombatOverview.CombatScore < l[j].CombatOverview.CombatScore {
 			return true
@@ -196,7 +197,7 @@ func (ph *playerHandler) formCombatRanks() {
 
 func (ph *playerHandler) formCraftingRanks() {
 	// copy player to slice and sort by crafting score
-	l := slices.Collect(maps.Values(ph.players))
+	l := slices.Collect(maps.Values(ph.dataStore.Players))
 	sort.Slice(l, func(i, j int) bool {
 		if l[i].CraftingOverview.CraftingScore < l[j].CraftingOverview.CraftingScore {
 			return true
@@ -220,7 +221,7 @@ func (ph *playerHandler) formCraftingRanks() {
 
 func (ph *playerHandler) formStoryRanks() {
 	// copy player to slice and sort by story score
-	l := slices.Collect(maps.Values(ph.players))
+	l := slices.Collect(maps.Values(ph.dataStore.Players))
 	sort.Slice(l, func(i, j int) bool {
 		if l[i].StoryOverview.StoryScore < l[j].StoryOverview.StoryScore {
 			return true
@@ -240,9 +241,9 @@ func (ph *playerHandler) formStoryRanks() {
 }
 
 func (ph *playerHandler) formStatRanks() {
-	playersSlice := slices.Collect(maps.Values(ph.players))
+	playersSlice := slices.Collect(maps.Values(ph.dataStore.Players))
 	tempLeaderboard := map[string]responsemodels.LeaderboardPlayer{}
-	for _, p := range ph.players {
+	for _, p := range ph.dataStore.Players {
 		tempLeaderboard[p.Uuid] = responsemodels.LeaderboardPlayer{
 			Uuid: p.Uuid,
 			Rank: 0,

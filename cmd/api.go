@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"log/slog"
 	"net/http"
-	"sync"
 	"time"
 
 	repo "github.com/Will-Gould/psmp-api/internal/adapters/mysql/sqlc"
@@ -23,12 +22,6 @@ type application struct {
 	db *sql.DB
 }
 
-// cache of players
-type playerStore struct {
-	mu         sync.RWMutex
-	playerList map[string]responsemodels.ServerPlayer
-}
-
 // mount
 func (app application) mount() http.Handler {
 	r := chi.NewRouter()
@@ -42,49 +35,41 @@ func (app application) mount() http.Handler {
 	// Set timeout
 	r.Use(middleware.Timeout(60 * time.Second))
 
+	// initialise cache
+	dataStore := mapping.DataStore{
+		Players:     make(map[string]responsemodels.ServerPlayer),
+		MappingData: mapping.MappingData{},
+	}
+
 	// New repo
 	repo := repo.New(app.db)
 
 	// Start mapping service & handler
 	mappingService := mapping.NewService(repo)
-	mappingHandler := mapping.NewHandler(mappingService)
-	// load mapping data
-	mappingData := mapping.MappingData{}
-	mappingHandler.LoadMappingData(context.Background(), &mappingData)
-
-	// schedule mapping data updates
-	go func() {
-		ticker := time.NewTicker(10 * time.Minute)
-		for range ticker.C {
-			slog.Log(context.Background(), slog.LevelInfo, "Updating mapping...")
-			mappingHandler.LoadMappingData(context.Background(), &mappingData)
-		}
-	}()
-
-	// Start player service & load in memory leaderboards
-	playerStore := playerStore{
-		playerList: make(map[string]responsemodels.ServerPlayer),
-	}
+	mappingHandler := mapping.NewHandler(mappingService, &dataStore)
+	// Start player service & handler
 	playerService := players.NewService(repo)
-	playerHandler := players.NewHandler(playerService, playerStore.playerList)
-	playerStore.mu.Lock()
-	playerHandler.Load(context.Background(), &mappingData)
-	playerStore.mu.Unlock()
+	playerHandler := players.NewHandler(playerService, &dataStore)
+
+	// Load data into cache
+	mappingHandler.LoadMappingData(context.Background())
+	playerHandler.Load(context.Background())
 
 	// schedule player list & leaderboard updates
 	go func() {
 		ticker := time.NewTicker(10 * time.Minute)
 		for range ticker.C {
-			slog.Log(context.Background(), slog.LevelInfo, "Updating leaderboard...")
-			playerStore.mu.Lock()
-			playerHandler.Load(context.Background(), &mappingData)
-			playerStore.mu.Unlock()
+			slog.Log(context.Background(), slog.LevelInfo, "Updating mapping data & leaderboard...")
+			dataStore.Mu.Lock()
+			mappingHandler.LoadMappingData(context.Background())
+			playerHandler.Load(context.Background())
+			dataStore.Mu.Unlock()
 		}
 	}()
 
 	// Start profile service & handler
 	profileService := profiles.NewService(repo)
-	profileHandler := profiles.NewHandler(profileService, &mappingData)
+	profileHandler := profiles.NewHandler(profileService, &dataStore)
 
 	// Map endpoints
 	// players

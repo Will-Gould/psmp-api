@@ -10,30 +10,32 @@ import (
 )
 
 type mappingHandler struct {
-	service Service
+	service   Service
+	dataStore *DataStore
 }
 
-func NewHandler(service Service) *mappingHandler {
+func NewHandler(service Service, ds *DataStore) *mappingHandler {
 	return &mappingHandler{
-		service: service,
+		service:   service,
+		dataStore: ds,
 	}
 }
 
-func (mh mappingHandler) LoadMappingData(ctx context.Context, md *MappingData) {
-	md.Mu.Lock()
+func (mh mappingHandler) LoadMappingData(ctx context.Context) {
+	mh.dataStore.MappingData.Mu.Lock()
 	materials := mh.GetMaterials(ctx)
 	bannedPlacedMaterials, bannedBrokenMaterials := mh.GetBannedMaterials(ctx, materials)
 	causeMapping := mh.GetDeathCauseMapping(ctx)
 	mobMapping := mh.GetMobMapping(ctx)
 	advancementMapping := mh.GetAdvancementMapping(ctx)
 
-	md.Materials = materials
-	md.BannedPlacedMaterials = bannedPlacedMaterials
-	md.BannedBrokenMaterials = bannedBrokenMaterials
-	md.CauseMapping = causeMapping
-	md.MobMapping = mobMapping
-	md.AdvancementMapping = advancementMapping
-	md.Mu.Unlock()
+	mh.dataStore.MappingData.Materials = materials
+	mh.dataStore.MappingData.BannedPlacedMaterials = bannedPlacedMaterials
+	mh.dataStore.MappingData.BannedBrokenMaterials = bannedBrokenMaterials
+	mh.dataStore.MappingData.CauseMapping = causeMapping
+	mh.dataStore.MappingData.MobMapping = mobMapping
+	mh.dataStore.MappingData.AdvancementMapping = advancementMapping
+	mh.dataStore.MappingData.Mu.Unlock()
 }
 
 func (mh mappingHandler) GetMaterials(ctx context.Context) []repo.Material {
