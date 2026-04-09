@@ -133,6 +133,82 @@ func (ph *profileHandler) GetBlocksBrokenPieChartData(w http.ResponseWriter, r *
 	json.Write(w, http.StatusOK, blockChart)
 }
 
+func (ph *profileHandler) GetTotalBlocksChart(w http.ResponseWriter, r *http.Request) {
+	uuid := chi.URLParam(r, "uuid")
+	data := []responsemodels.DoubleDailyChartItem{}
+
+	glUser, err := ph.service.FindGriefLoggerUser(r.Context(), uuid)
+	if err != nil {
+		json.Write(w, http.StatusNotFound, nil)
+		return
+	}
+
+	blocksBroken, err := ph.service.ListBlocksByUser(r.Context(), glUser.ID, mapping.BLOCK_BROKEN_ACTION, ph.mappingData.BannedBrokenMaterials)
+	if err != nil {
+		json.Write(w, http.StatusInternalServerError, nil)
+	}
+	blocksPlaced, err := ph.service.ListBlocksByUser(r.Context(), glUser.ID, mapping.BLOCK_PLACED_ACTION, ph.mappingData.BannedPlacedMaterials)
+	if err != nil {
+		json.Write(w, http.StatusInternalServerError, nil)
+	}
+
+	// combine block action into one slice & sort
+	blocks := append(blocksBroken, blocksPlaced...)
+
+	sort.Slice(blocks, func(i, j int) bool {
+		if blocks[i].Time < blocks[j].Time {
+			return true
+		}
+		return false
+	})
+	firstBlockTime := time.Unix(blocks[0].Time/1000, 0)
+	earliestMidnight := firstBlockTime.Truncate(24 * time.Hour)
+	nextDay := time.Now().AddDate(0, 0, 1).Local()
+	nextMidnight := nextDay.Truncate(24 * time.Hour)
+	// initialise value for each date between now & first block action
+	for d := earliestMidnight; !d.After(nextMidnight); d = d.AddDate(0, 0, 1) {
+		dateString := d.Local().Format(DATE_FORMAT)
+		data = append(data, responsemodels.DoubleDailyChartItem{
+			Date:   dateString,
+			Value1: 0,
+			Value2: 0,
+		})
+	}
+
+	for i, b := range blocks {
+		blockDate := time.Unix(blocks[i].Time/1000, 0).Format(DATE_FORMAT)
+		for j, d := range data {
+
+			if d.Date == blockDate {
+
+				if b.Action == mapping.BLOCK_PLACED_ACTION {
+					data[j].Value1 += 1
+				}
+				if b.Action == mapping.BLOCK_BROKEN_ACTION {
+					data[j].Value2 += 1
+				}
+			}
+		}
+	}
+
+	// combine date values so each day has a running total
+	for i := range data {
+		if i == 0 {
+			continue
+		}
+		data[i].Value1 += data[i-1].Value1
+		data[i].Value2 += data[i-1].Value2
+	}
+
+	chart := responsemodels.DoubleDailyChart{
+		Title:     "Total Blocks Placed vs Broken",
+		ChartData: data,
+		Trend:     0,
+	}
+
+	json.Write(w, http.StatusOK, chart)
+}
+
 func (ph *profileHandler) findMaterialName(id int32) string {
 	for _, m := range ph.dataStore.MappingData.Materials {
 		if id == m.ID {

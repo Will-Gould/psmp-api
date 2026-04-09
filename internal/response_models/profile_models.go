@@ -5,11 +5,23 @@ type SingleDailyChartItem struct {
 	Value int64
 }
 
+type DoubleDailyChartItem struct {
+	Date   string
+	Value1 int64
+	Value2 int64
+}
+
 type SingleDailyChart struct {
 	Title        string
 	ChartData    []SingleDailyChartItem
 	TimeDivision string
 	Trend        float64
+}
+
+type DoubleDailyChart struct {
+	Title     string
+	ChartData []DoubleDailyChartItem
+	Trend     float64
 }
 
 type BlockChartItem struct {

@@ -18,6 +18,7 @@ type Service interface {
 	ListAdvancementsByPlayer(ctx context.Context, uuid string) ([]repo.PsmpstatsAdvancement, error)
 	ListMobKillsByUuid(ctx context.Context, uuid string) ([]repo.PsmpstatsMobKill, error)
 	GroupCountBlocksByUser(ctx context.Context, id int32, action int32, banned []int32) ([]repo.GroupCountBlocksPlacedByUserRow, error)
+	ListBlocksByUser(ctx context.Context, id int32, action int32, banned []int32) ([]repo.Block, error)
 }
 
 type svc struct {
@@ -95,4 +96,8 @@ func (s *svc) ListSessionDataByUser(ctx context.Context, id int32) ([]repo.Sessi
 
 func (s *svc) GroupCountBlocksByUser(ctx context.Context, id int32, action int32, banned []int32) ([]repo.GroupCountBlocksPlacedByUserRow, error) {
 	return s.repo.GroupCountBlocksByUser(ctx, id, action, banned)
+}
+
+func (s *svc) ListBlocksByUser(ctx context.Context, id int32, action int32, banned []int32) ([]repo.Block, error) {
+	return s.repo.ListBlocksByUser(ctx, id, action, banned)
 }
