@@ -126,7 +126,9 @@ func (ph *playerHandler) GetStatRanks(w http.ResponseWriter, r *http.Request) {
 	uuid := chi.URLParam(r, "uuid")
 
 	// check if player exists
+	ph.dataStore.Mu.RLock()
 	_, ok := ph.dataStore.Players[uuid]
+	ph.dataStore.Mu.RUnlock()
 	if !ok {
 		json.Write(w, http.StatusNotFound, nil)
 	}
@@ -151,10 +153,12 @@ func (ph *playerHandler) GetStatRank(w http.ResponseWriter, r *http.Request) {
 	uuid := chi.URLParam(r, "uuid")
 
 	// check if player exists
+	ph.dataStore.Mu.RLock()
 	_, ok := ph.dataStore.Players[uuid]
 	if !ok {
 		json.Write(w, http.StatusNotFound, nil)
 	}
+	ph.dataStore.Mu.RLock()
 
 	switch stat {
 	case "blocks-placed":

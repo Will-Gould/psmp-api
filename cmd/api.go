@@ -57,7 +57,7 @@ func (app application) mount() http.Handler {
 
 	// schedule player list & leaderboard updates
 	go func() {
-		ticker := time.NewTicker(1 * time.Minute)
+		ticker := time.NewTicker(10 * time.Minute)
 		for range ticker.C {
 			slog.Log(context.Background(), slog.LevelInfo, "Updating mapping data & leaderboard...")
 			dataStore.Mu.Lock()
