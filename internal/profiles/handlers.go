@@ -143,11 +143,11 @@ func (ph *profileHandler) GetTotalBlocksChart(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	blocksBroken, err := ph.service.ListBlocksByUser(r.Context(), glUser.ID, mapping.BLOCK_BROKEN_ACTION, ph.mappingData.BannedBrokenMaterials)
+	blocksBroken, err := ph.service.ListBlocksByUser(r.Context(), glUser.ID, mapping.BLOCK_BROKEN_ACTION, ph.dataStore.MappingData.BannedBrokenMaterials)
 	if err != nil {
 		json.Write(w, http.StatusInternalServerError, nil)
 	}
-	blocksPlaced, err := ph.service.ListBlocksByUser(r.Context(), glUser.ID, mapping.BLOCK_PLACED_ACTION, ph.mappingData.BannedPlacedMaterials)
+	blocksPlaced, err := ph.service.ListBlocksByUser(r.Context(), glUser.ID, mapping.BLOCK_PLACED_ACTION, ph.dataStore.MappingData.BannedPlacedMaterials)
 	if err != nil {
 		json.Write(w, http.StatusInternalServerError, nil)
 	}
