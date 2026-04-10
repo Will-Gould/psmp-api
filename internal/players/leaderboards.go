@@ -35,6 +35,24 @@ func (ph *playerHandler) ListServerLeaderboard(w http.ResponseWriter, r *http.Re
 	json.Write(w, http.StatusOK, lb)
 }
 
+func (ph *playerHandler) ListServerTopTen(w http.ResponseWriter, r *http.Request) {
+	ph.dataStore.Mu.RLock()
+	lb := slices.Collect(maps.Values(ph.dataStore.Players))
+	ph.dataStore.Mu.RUnlock()
+	sort.Slice(lb, func(i, j int) bool {
+		if lb[i].ServerRank < lb[j].ServerRank {
+			return true
+		}
+		return false
+	})
+
+	if len(lb) <= 10 {
+		json.Write(w, http.StatusOK, lb)
+	} else {
+		json.Write(w, http.StatusOK, lb[:10])
+	}
+}
+
 func (ph *playerHandler) ListCombatLeaderboard(w http.ResponseWriter, r *http.Request) {
 	lb := slices.Collect(maps.Values(ph.combatLeaderboard))
 	sort.Slice(lb, func(i, j int) bool {
@@ -46,6 +64,22 @@ func (ph *playerHandler) ListCombatLeaderboard(w http.ResponseWriter, r *http.Re
 	json.Write(w, http.StatusOK, lb)
 }
 
+func (ph *playerHandler) ListCombatTopTen(w http.ResponseWriter, r *http.Request) {
+	lb := slices.Collect(maps.Values(ph.combatLeaderboard))
+	sort.Slice(lb, func(i, j int) bool {
+		if lb[i].Rank < lb[j].Rank {
+			return true
+		}
+		return false
+	})
+
+	if len(lb) <= 10 {
+		json.Write(w, http.StatusOK, lb)
+	} else {
+		json.Write(w, http.StatusOK, lb[:10])
+	}
+}
+
 func (ph *playerHandler) ListCraftingLeaderboard(w http.ResponseWriter, r *http.Request) {
 	lb := slices.Collect(maps.Values(ph.craftingLeaderboard))
 	sort.Slice(lb, func(i, j int) bool {
@@ -55,6 +89,21 @@ func (ph *playerHandler) ListCraftingLeaderboard(w http.ResponseWriter, r *http.
 		return false
 	})
 	json.Write(w, http.StatusOK, lb)
+}
+
+func (ph *playerHandler) ListCraftingTopTen(w http.ResponseWriter, r *http.Request) {
+	lb := slices.Collect(maps.Values(ph.craftingLeaderboard))
+	sort.Slice(lb, func(i, j int) bool {
+		if lb[i].Rank < lb[j].Rank {
+			return true
+		}
+		return false
+	})
+	if len(lb) <= 10 {
+		json.Write(w, http.StatusOK, lb)
+	} else {
+		json.Write(w, http.StatusOK, lb[:10])
+	}
 }
 
 func (ph *playerHandler) ListStoryLeaderboard(w http.ResponseWriter, r *http.Request) {
