@@ -8,6 +8,7 @@ import (
 	"time"
 
 	repo "github.com/Will-Gould/psmp-api/internal/adapters/mysql/sqlc"
+	"github.com/Will-Gould/psmp-api/internal/cache"
 	"github.com/Will-Gould/psmp-api/internal/mapping"
 	"github.com/Will-Gould/psmp-api/internal/players"
 	"github.com/Will-Gould/psmp-api/internal/profiles"
@@ -36,9 +37,22 @@ func (app application) mount() http.Handler {
 	r.Use(middleware.Timeout(60 * time.Second))
 
 	// initialise cache
-	dataStore := mapping.DataStore{
-		Players:     make(map[string]responsemodels.ServerPlayer),
-		MappingData: mapping.MappingData{},
+	dataStore := cache.DataStore{
+		Players:             make(map[string]responsemodels.ServerPlayer),
+		MappingData:         cache.MappingData{},
+		CombatLeaderboard:   make(map[string]responsemodels.CombatLeaderboardPlayer),
+		CraftingLeaderboard: make(map[string]responsemodels.CraftingLeaderboardPlayer),
+		StoryLeaderboard:    make(map[string]responsemodels.StoryLeaderboardPlayer),
+		StatLeaderboards: cache.StatLeaderboards{
+			BlocksPlacedLeaderboard:  map[string]responsemodels.LeaderboardPlayer{},
+			BlocksBrokenLeaderboard:  map[string]responsemodels.LeaderboardPlayer{},
+			DiamondsMinedLeaderboard: map[string]responsemodels.LeaderboardPlayer{},
+			TimePlayedLeaderboard:    map[string]responsemodels.LeaderboardPlayer{},
+			PvpKillsLeaderboard:      map[string]responsemodels.LeaderboardPlayer{},
+			DeathsLeaderboard:        map[string]responsemodels.LeaderboardPlayer{},
+			MobKillsLeaderboard:      map[string]responsemodels.LeaderboardPlayer{},
+			PvpKdRatioLeaderboard:    map[string]responsemodels.LeaderboardPlayer{},
+		},
 	}
 
 	// New repo
@@ -87,6 +101,7 @@ func (app application) mount() http.Handler {
 
 	// stat leaderboards
 	r.Get("/api/players/leaderboards/stats/{uuid}", playerHandler.GetStatRanks)
+	r.Get("/api/players/leaderboards/stats/stat/{stat}", playerHandler.ListStatLeaderboard)
 
 	// features
 	r.Get("/api/players/leaderboards/champion-player", playerHandler.GetChampionPlayer)

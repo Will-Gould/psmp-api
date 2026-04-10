@@ -5,11 +5,12 @@ import (
 	"sort"
 
 	repo "github.com/Will-Gould/psmp-api/internal/adapters/mysql/sqlc"
+	"github.com/Will-Gould/psmp-api/internal/cache"
 	"github.com/Will-Gould/psmp-api/internal/mapping"
 	responsemodels "github.com/Will-Gould/psmp-api/internal/response_models"
 )
 
-func (ph *playerHandler) getCraftingOverview(ctx context.Context, uuid string, glId int32, md *mapping.MappingData) (responsemodels.CraftingOverview, error) {
+func (ph *playerHandler) getCraftingOverview(ctx context.Context, uuid string, glId int32, md *cache.MappingData) (responsemodels.CraftingOverview, error) {
 	// count blocks
 	blocksBroken, err := ph.service.CountBlocksByUser(ctx, glId, mapping.BLOCK_BROKEN_ACTION, md.BannedBrokenMaterials)
 	if err != nil {

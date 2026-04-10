@@ -1,5 +1,13 @@
 package responsemodels
 
+type PlayerProfile struct {
+	Player                ServerPlayer
+	CombatRank            int64
+	CraftingRank          int64
+	StoryRank             int64
+	StatLeaderboardPlayer StatLeaderboardPlayer
+}
+
 type SingleDailyChartItem struct {
 	Date  string
 	Value int64

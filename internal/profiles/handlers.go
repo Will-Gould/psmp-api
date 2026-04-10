@@ -7,6 +7,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/Will-Gould/psmp-api/internal/cache"
 	"github.com/Will-Gould/psmp-api/internal/json"
 	"github.com/Will-Gould/psmp-api/internal/mapping"
 	responsemodels "github.com/Will-Gould/psmp-api/internal/response_models"
@@ -17,10 +18,10 @@ const DATE_FORMAT = "2006-01-02"
 
 type profileHandler struct {
 	service   Service
-	dataStore *mapping.DataStore
+	dataStore *cache.DataStore
 }
 
-func NewHandler(service Service, ds *mapping.DataStore) *profileHandler {
+func NewHandler(service Service, ds *cache.DataStore) *profileHandler {
 	return &profileHandler{
 		service:   service,
 		dataStore: ds,
