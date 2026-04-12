@@ -1,12 +1,5 @@
 package mapping
 
-import (
-	"sync"
-
-	repo "github.com/Will-Gould/psmp-api/internal/adapters/mysql/sqlc"
-	responsemodels "github.com/Will-Gould/psmp-api/internal/response_models"
-)
-
 const BLOCK_BROKEN_ACTION = 0
 const BLOCK_PLACED_ACTION = 1
 const PLAYER_JOIN_ACTION = 0
@@ -136,20 +129,4 @@ var BANNED_BROKEN_MATERIALS = []string{
 	"leaf_litter",
 	"snow",
 	"bush",
-}
-
-type MappingData struct {
-	Mu                    sync.RWMutex
-	Materials             []repo.Material
-	BannedPlacedMaterials []int32
-	BannedBrokenMaterials []int32
-	CauseMapping          []repo.PsmpstatsCause
-	MobMapping            []repo.PsmpstatsMob
-	AdvancementMapping    []repo.PsmpstatsAdvancement
-}
-
-type DataStore struct {
-	Mu          sync.RWMutex
-	Players     map[string]responsemodels.ServerPlayer
-	MappingData MappingData
 }

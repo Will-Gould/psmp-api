@@ -8,34 +8,26 @@ import (
 	"slices"
 	"sort"
 
+	"github.com/Will-Gould/psmp-api/internal/cache"
 	"github.com/Will-Gould/psmp-api/internal/json"
-	"github.com/Will-Gould/psmp-api/internal/mapping"
 	responsemodels "github.com/Will-Gould/psmp-api/internal/response_models"
 	"github.com/go-chi/chi"
 )
 
 type playerHandler struct {
-	service             Service
-	dataStore           *mapping.DataStore
-	combatLeaderboard   map[string]responsemodels.CombatLeaderboardPlayer
-	craftingLeaderboard map[string]responsemodels.CraftingLeaderboardPlayer
-	storyLeaderboard    map[string]responsemodels.StoryLeaderboardPlayer
-	statLeaderboards    StatLeaderboards
+	service   Service
+	dataStore *cache.DataStore
 }
 
-func NewHandler(service Service, ds *mapping.DataStore) *playerHandler {
+func NewHandler(service Service, ds *cache.DataStore) *playerHandler {
 	return &playerHandler{
-		service:             service,
-		dataStore:           ds,
-		craftingLeaderboard: make(map[string]responsemodels.CraftingLeaderboardPlayer),
-		combatLeaderboard:   make(map[string]responsemodels.CombatLeaderboardPlayer),
-		storyLeaderboard:    make(map[string]responsemodels.StoryLeaderboardPlayer),
+		service:   service,
+		dataStore: ds,
 	}
 }
 
 func (ph *playerHandler) Load(ctx context.Context) {
 	ph.loadServerLeaderboard(ctx, &ph.dataStore.MappingData)
-	ph.loadStatLeaderboards()
 	ph.formServerRanks()
 	ph.formCombatRanks()
 	ph.formCraftingRanks()
@@ -96,7 +88,7 @@ func (ph *playerHandler) GetBiggestBuilder(w http.ResponseWriter, r *http.Reques
 	json.Write(w, http.StatusOK, buildRanking[0])
 }
 
-func (ph *playerHandler) loadServerLeaderboard(ctx context.Context, md *mapping.MappingData) {
+func (ph *playerHandler) loadServerLeaderboard(ctx context.Context, md *cache.MappingData) {
 	luckpermsPlayers, err := ph.service.ListLuckpermsPlayers(ctx)
 	if err != nil {
 		slog.Log(ctx, slog.LevelError, "Failed to retrieve Luckperms players")
@@ -120,21 +112,7 @@ func (ph *playerHandler) loadServerLeaderboard(ctx context.Context, md *mapping.
 	}
 }
 
-func (ph *playerHandler) loadStatLeaderboards() {
-	sl := StatLeaderboards{
-		BlocksPlacedLeaderboard:  map[string]responsemodels.LeaderboardPlayer{},
-		BlocksBrokenLeaderboard:  map[string]responsemodels.LeaderboardPlayer{},
-		DiamondsMinedLeaderboard: map[string]responsemodels.LeaderboardPlayer{},
-		TimePlayedLeaderboard:    map[string]responsemodels.LeaderboardPlayer{},
-		PvpKillsLeaderboard:      map[string]responsemodels.LeaderboardPlayer{},
-		DeathsLeaderboard:        map[string]responsemodels.LeaderboardPlayer{},
-		MobKillsLeaderboard:      map[string]responsemodels.LeaderboardPlayer{},
-		PvpKdRatioLeaderboard:    map[string]responsemodels.LeaderboardPlayer{},
-	}
-	ph.statLeaderboards = sl
-}
-
-func (ph *playerHandler) getPlayerData(ctx context.Context, player *responsemodels.ServerPlayer, md *mapping.MappingData) {
+func (ph *playerHandler) getPlayerData(ctx context.Context, player *responsemodels.ServerPlayer, md *cache.MappingData) {
 
 	// get combat overview
 	combatOverview, err := ph.getCombatOverview(ctx, player.Uuid)
@@ -200,7 +178,7 @@ func (ph *playerHandler) formCombatRanks() {
 			MobKills:     sp.CombatOverview.MobKills,
 			Deaths:       sp.CombatOverview.Deaths,
 		}
-		ph.combatLeaderboard[sp.Uuid] = lp
+		ph.dataStore.CombatLeaderboard[sp.Uuid] = lp
 	}
 }
 
@@ -224,7 +202,7 @@ func (ph *playerHandler) formCraftingRanks() {
 			BlocksBroken:  sp.CraftingOverview.BlocksBroken,
 			DiamondsMined: sp.CraftingOverview.DiamondsMined,
 		}
-		ph.craftingLeaderboard[sp.Uuid] = lp
+		ph.dataStore.CraftingLeaderboard[sp.Uuid] = lp
 	}
 }
 
@@ -245,7 +223,7 @@ func (ph *playerHandler) formStoryRanks() {
 			PrimaryGroup: sp.PrimaryGroup,
 			Rank:         int64(i) + 1,
 		}
-		ph.storyLeaderboard[sp.Uuid] = lp
+		ph.dataStore.StoryLeaderboard[sp.Uuid] = lp
 	}
 }
 
@@ -269,7 +247,7 @@ func (ph *playerHandler) formStatRanks() {
 
 	// transfer ranks to temp leaderboard and clone to leaderboard
 	transferRanks(playersSlice, tempLeaderboard)
-	ph.statLeaderboards.BlocksPlacedLeaderboard = maps.Clone(tempLeaderboard)
+	ph.dataStore.StatLeaderboards.BlocksPlacedLeaderboard = maps.Clone(tempLeaderboard)
 
 	// order for blocks broken ranks
 	sort.Slice(playersSlice, func(i, j int) bool {
@@ -279,7 +257,7 @@ func (ph *playerHandler) formStatRanks() {
 		return false
 	})
 	transferRanks(playersSlice, tempLeaderboard)
-	ph.statLeaderboards.BlocksBrokenLeaderboard = maps.Clone(tempLeaderboard)
+	ph.dataStore.StatLeaderboards.BlocksBrokenLeaderboard = maps.Clone(tempLeaderboard)
 
 	// order for diamonds mined ranks
 	sort.Slice(playersSlice, func(i, j int) bool {
@@ -289,7 +267,7 @@ func (ph *playerHandler) formStatRanks() {
 		return false
 	})
 	transferRanks(playersSlice, tempLeaderboard)
-	ph.statLeaderboards.DiamondsMinedLeaderboard = maps.Clone(tempLeaderboard)
+	ph.dataStore.StatLeaderboards.DiamondsMinedLeaderboard = maps.Clone(tempLeaderboard)
 
 	// order for time played ranks
 	sort.Slice(playersSlice, func(i, j int) bool {
@@ -299,7 +277,7 @@ func (ph *playerHandler) formStatRanks() {
 		return false
 	})
 	transferRanks(playersSlice, tempLeaderboard)
-	ph.statLeaderboards.TimePlayedLeaderboard = maps.Clone(tempLeaderboard)
+	ph.dataStore.StatLeaderboards.TimePlayedLeaderboard = maps.Clone(tempLeaderboard)
 
 	// order for pvp kills ranks
 	sort.Slice(playersSlice, func(i, j int) bool {
@@ -309,7 +287,7 @@ func (ph *playerHandler) formStatRanks() {
 		return false
 	})
 	transferRanks(playersSlice, tempLeaderboard)
-	ph.statLeaderboards.PvpKillsLeaderboard = maps.Clone(tempLeaderboard)
+	ph.dataStore.StatLeaderboards.PvpKillsLeaderboard = maps.Clone(tempLeaderboard)
 
 	// order for deaths ranks
 	sort.Slice(playersSlice, func(i, j int) bool {
@@ -319,7 +297,7 @@ func (ph *playerHandler) formStatRanks() {
 		return false
 	})
 	transferRanks(playersSlice, tempLeaderboard)
-	ph.statLeaderboards.DeathsLeaderboard = maps.Clone(tempLeaderboard)
+	ph.dataStore.StatLeaderboards.DeathsLeaderboard = maps.Clone(tempLeaderboard)
 
 	// order for mob kills ranks
 	sort.Slice(playersSlice, func(i, j int) bool {
@@ -329,7 +307,7 @@ func (ph *playerHandler) formStatRanks() {
 		return false
 	})
 	transferRanks(playersSlice, tempLeaderboard)
-	ph.statLeaderboards.MobKillsLeaderboard = maps.Clone(tempLeaderboard)
+	ph.dataStore.StatLeaderboards.MobKillsLeaderboard = maps.Clone(tempLeaderboard)
 
 	// order for pvp kd ratio ranks
 	sort.Slice(playersSlice, func(i, j int) bool {
@@ -339,7 +317,7 @@ func (ph *playerHandler) formStatRanks() {
 		return false
 	})
 	transferRanks(playersSlice, tempLeaderboard)
-	ph.statLeaderboards.PvpKdRatioLeaderboard = maps.Clone(tempLeaderboard)
+	ph.dataStore.StatLeaderboards.PvpKdRatioLeaderboard = maps.Clone(tempLeaderboard)
 }
 
 func transferRanks(players []responsemodels.ServerPlayer, l map[string]responsemodels.LeaderboardPlayer) {

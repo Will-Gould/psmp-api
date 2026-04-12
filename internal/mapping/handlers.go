@@ -7,14 +7,15 @@ import (
 	"slices"
 
 	repo "github.com/Will-Gould/psmp-api/internal/adapters/mysql/sqlc"
+	"github.com/Will-Gould/psmp-api/internal/cache"
 )
 
 type mappingHandler struct {
 	service   Service
-	dataStore *DataStore
+	dataStore *cache.DataStore
 }
 
-func NewHandler(service Service, ds *DataStore) *mappingHandler {
+func NewHandler(service Service, ds *cache.DataStore) *mappingHandler {
 	return &mappingHandler{
 		service:   service,
 		dataStore: ds,
@@ -22,7 +23,6 @@ func NewHandler(service Service, ds *DataStore) *mappingHandler {
 }
 
 func (mh mappingHandler) LoadMappingData(ctx context.Context) {
-	mh.dataStore.MappingData.Mu.Lock()
 	materials := mh.GetMaterials(ctx)
 	bannedPlacedMaterials, bannedBrokenMaterials := mh.GetBannedMaterials(ctx, materials)
 	causeMapping := mh.GetDeathCauseMapping(ctx)
@@ -35,7 +35,6 @@ func (mh mappingHandler) LoadMappingData(ctx context.Context) {
 	mh.dataStore.MappingData.CauseMapping = causeMapping
 	mh.dataStore.MappingData.MobMapping = mobMapping
 	mh.dataStore.MappingData.AdvancementMapping = advancementMapping
-	mh.dataStore.MappingData.Mu.Unlock()
 }
 
 func (mh mappingHandler) GetMaterials(ctx context.Context) []repo.Material {

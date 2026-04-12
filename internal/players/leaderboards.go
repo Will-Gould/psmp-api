@@ -11,17 +11,6 @@ import (
 	"github.com/go-chi/chi"
 )
 
-type StatLeaderboards struct {
-	BlocksPlacedLeaderboard  map[string]responsemodels.LeaderboardPlayer
-	BlocksBrokenLeaderboard  map[string]responsemodels.LeaderboardPlayer
-	DiamondsMinedLeaderboard map[string]responsemodels.LeaderboardPlayer
-	TimePlayedLeaderboard    map[string]responsemodels.LeaderboardPlayer
-	PvpKillsLeaderboard      map[string]responsemodels.LeaderboardPlayer
-	DeathsLeaderboard        map[string]responsemodels.LeaderboardPlayer
-	MobKillsLeaderboard      map[string]responsemodels.LeaderboardPlayer
-	PvpKdRatioLeaderboard    map[string]responsemodels.LeaderboardPlayer
-}
-
 func (ph *playerHandler) ListServerLeaderboard(w http.ResponseWriter, r *http.Request) {
 	ph.dataStore.Mu.RLock()
 	lb := slices.Collect(maps.Values(ph.dataStore.Players))
@@ -54,7 +43,9 @@ func (ph *playerHandler) ListServerTopTen(w http.ResponseWriter, r *http.Request
 }
 
 func (ph *playerHandler) ListCombatLeaderboard(w http.ResponseWriter, r *http.Request) {
-	lb := slices.Collect(maps.Values(ph.combatLeaderboard))
+	ph.dataStore.Mu.RLock()
+	lb := slices.Collect(maps.Values(ph.dataStore.CombatLeaderboard))
+	ph.dataStore.Mu.RUnlock()
 	sort.Slice(lb, func(i, j int) bool {
 		if lb[i].Rank < lb[j].Rank {
 			return true
@@ -65,7 +56,9 @@ func (ph *playerHandler) ListCombatLeaderboard(w http.ResponseWriter, r *http.Re
 }
 
 func (ph *playerHandler) ListCombatTopTen(w http.ResponseWriter, r *http.Request) {
-	lb := slices.Collect(maps.Values(ph.combatLeaderboard))
+	ph.dataStore.Mu.RLock()
+	lb := slices.Collect(maps.Values(ph.dataStore.CombatLeaderboard))
+	ph.dataStore.Mu.RUnlock()
 	sort.Slice(lb, func(i, j int) bool {
 		if lb[i].Rank < lb[j].Rank {
 			return true
@@ -81,7 +74,9 @@ func (ph *playerHandler) ListCombatTopTen(w http.ResponseWriter, r *http.Request
 }
 
 func (ph *playerHandler) ListCraftingLeaderboard(w http.ResponseWriter, r *http.Request) {
-	lb := slices.Collect(maps.Values(ph.craftingLeaderboard))
+	ph.dataStore.Mu.RLock()
+	lb := slices.Collect(maps.Values(ph.dataStore.CraftingLeaderboard))
+	ph.dataStore.Mu.RUnlock()
 	sort.Slice(lb, func(i, j int) bool {
 		if lb[i].Rank < lb[j].Rank {
 			return true
@@ -92,7 +87,9 @@ func (ph *playerHandler) ListCraftingLeaderboard(w http.ResponseWriter, r *http.
 }
 
 func (ph *playerHandler) ListCraftingTopTen(w http.ResponseWriter, r *http.Request) {
-	lb := slices.Collect(maps.Values(ph.craftingLeaderboard))
+	ph.dataStore.Mu.RLock()
+	lb := slices.Collect(maps.Values(ph.dataStore.CraftingLeaderboard))
+	ph.dataStore.Mu.RUnlock()
 	sort.Slice(lb, func(i, j int) bool {
 		if lb[i].Rank < lb[j].Rank {
 			return true
@@ -107,7 +104,9 @@ func (ph *playerHandler) ListCraftingTopTen(w http.ResponseWriter, r *http.Reque
 }
 
 func (ph *playerHandler) ListStoryLeaderboard(w http.ResponseWriter, r *http.Request) {
-	lb := slices.Collect(maps.Values(ph.storyLeaderboard))
+	ph.dataStore.Mu.RLock()
+	lb := slices.Collect(maps.Values(ph.dataStore.StoryLeaderboard))
+	ph.dataStore.Mu.RUnlock()
 	sort.Slice(lb, func(i, j int) bool {
 		if lb[i].Rank < lb[j].Rank {
 			return true
@@ -119,7 +118,9 @@ func (ph *playerHandler) ListStoryLeaderboard(w http.ResponseWriter, r *http.Req
 
 func (ph *playerHandler) GetCombatLeaderboardPlayer(w http.ResponseWriter, r *http.Request) {
 	uuid := chi.URLParam(r, "uuid")
-	lp, ok := ph.combatLeaderboard[uuid]
+	ph.dataStore.Mu.RLock()
+	lp, ok := ph.dataStore.CombatLeaderboard[uuid]
+	ph.dataStore.Mu.RUnlock()
 	if ok {
 		json.Write(w, http.StatusOK, lp)
 	} else {
@@ -129,7 +130,9 @@ func (ph *playerHandler) GetCombatLeaderboardPlayer(w http.ResponseWriter, r *ht
 
 func (ph *playerHandler) GetCraftingLeaderboardPlayer(w http.ResponseWriter, r *http.Request) {
 	uuid := chi.URLParam(r, "uuid")
-	lp, ok := ph.craftingLeaderboard[uuid]
+	ph.dataStore.Mu.RLock()
+	lp, ok := ph.dataStore.CraftingLeaderboard[uuid]
+	ph.dataStore.Mu.RUnlock()
 	if ok {
 		json.Write(w, http.StatusOK, lp)
 	} else {
@@ -139,7 +142,9 @@ func (ph *playerHandler) GetCraftingLeaderboardPlayer(w http.ResponseWriter, r *
 
 func (ph *playerHandler) GetStoryLeaderboardPlayer(w http.ResponseWriter, r *http.Request) {
 	uuid := chi.URLParam(r, "uuid")
-	lp, ok := ph.storyLeaderboard[uuid]
+	ph.dataStore.Mu.RLock()
+	lp, ok := ph.dataStore.StoryLeaderboard[uuid]
+	ph.dataStore.Mu.RUnlock()
 	if ok {
 		json.Write(w, http.StatusOK, lp)
 	} else {
@@ -149,26 +154,28 @@ func (ph *playerHandler) GetStoryLeaderboardPlayer(w http.ResponseWriter, r *htt
 
 func (ph *playerHandler) ListStatLeaderboard(w http.ResponseWriter, r *http.Request) {
 	stat := chi.URLParam(r, "stat")
+	ph.dataStore.Mu.RLock()
 	switch stat {
 	case "blocks-placed":
-		json.Write(w, http.StatusOK, ph.statLeaderboards.BlocksPlacedLeaderboard)
+		json.Write(w, http.StatusOK, ph.dataStore.StatLeaderboards.BlocksPlacedLeaderboard)
 	case "blocks-broken":
-		json.Write(w, http.StatusOK, ph.statLeaderboards.BlocksBrokenLeaderboard)
+		json.Write(w, http.StatusOK, ph.dataStore.StatLeaderboards.BlocksBrokenLeaderboard)
 	case "diamonds-mined":
-		json.Write(w, http.StatusOK, ph.statLeaderboards.DiamondsMinedLeaderboard)
+		json.Write(w, http.StatusOK, ph.dataStore.StatLeaderboards.DiamondsMinedLeaderboard)
 	case "time-played":
-		json.Write(w, http.StatusOK, ph.statLeaderboards.TimePlayedLeaderboard)
+		json.Write(w, http.StatusOK, ph.dataStore.StatLeaderboards.TimePlayedLeaderboard)
 	case "pvp-kills":
-		json.Write(w, http.StatusOK, ph.statLeaderboards.PvpKillsLeaderboard)
+		json.Write(w, http.StatusOK, ph.dataStore.StatLeaderboards.PvpKillsLeaderboard)
 	case "deaths":
-		json.Write(w, http.StatusOK, ph.statLeaderboards.DeathsLeaderboard)
+		json.Write(w, http.StatusOK, ph.dataStore.StatLeaderboards.DeathsLeaderboard)
 	case "mob-kills":
-		json.Write(w, http.StatusOK, ph.statLeaderboards.MobKillsLeaderboard)
+		json.Write(w, http.StatusOK, ph.dataStore.StatLeaderboards.MobKillsLeaderboard)
 	case "pvp-kd-ratio":
-		json.Write(w, http.StatusOK, ph.statLeaderboards.PvpKdRatioLeaderboard)
+		json.Write(w, http.StatusOK, ph.dataStore.StatLeaderboards.PvpKdRatioLeaderboard)
 	default:
 		json.Write(w, http.StatusNotFound, nil)
 	}
+	ph.dataStore.Mu.RUnlock()
 }
 
 func (ph *playerHandler) GetStatRanks(w http.ResponseWriter, r *http.Request) {
@@ -184,14 +191,14 @@ func (ph *playerHandler) GetStatRanks(w http.ResponseWriter, r *http.Request) {
 
 	sr := responsemodels.StatLeaderboardPlayer{
 		Uuid:              uuid,
-		BlocksPlacedRank:  ph.statLeaderboards.BlocksPlacedLeaderboard[uuid].Rank,
-		BlocksBrokenRank:  ph.statLeaderboards.BlocksBrokenLeaderboard[uuid].Rank,
-		DiamondsMinedRank: ph.statLeaderboards.DiamondsMinedLeaderboard[uuid].Rank,
-		TimePlayedRank:    ph.statLeaderboards.TimePlayedLeaderboard[uuid].Rank,
-		PvpKillsRank:      ph.statLeaderboards.PvpKillsLeaderboard[uuid].Rank,
-		DeathsRank:        ph.statLeaderboards.DeathsLeaderboard[uuid].Rank,
-		MobKillsRank:      ph.statLeaderboards.MobKillsLeaderboard[uuid].Rank,
-		PvpKdRatioRank:    ph.statLeaderboards.PvpKdRatioLeaderboard[uuid].Rank,
+		BlocksPlacedRank:  ph.dataStore.StatLeaderboards.BlocksPlacedLeaderboard[uuid].Rank,
+		BlocksBrokenRank:  ph.dataStore.StatLeaderboards.BlocksBrokenLeaderboard[uuid].Rank,
+		DiamondsMinedRank: ph.dataStore.StatLeaderboards.DiamondsMinedLeaderboard[uuid].Rank,
+		TimePlayedRank:    ph.dataStore.StatLeaderboards.TimePlayedLeaderboard[uuid].Rank,
+		PvpKillsRank:      ph.dataStore.StatLeaderboards.PvpKillsLeaderboard[uuid].Rank,
+		DeathsRank:        ph.dataStore.StatLeaderboards.DeathsLeaderboard[uuid].Rank,
+		MobKillsRank:      ph.dataStore.StatLeaderboards.MobKillsLeaderboard[uuid].Rank,
+		PvpKdRatioRank:    ph.dataStore.StatLeaderboards.PvpKdRatioLeaderboard[uuid].Rank,
 	}
 
 	json.Write(w, http.StatusOK, sr)
@@ -207,25 +214,25 @@ func (ph *playerHandler) GetStatRank(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		json.Write(w, http.StatusNotFound, nil)
 	}
-	ph.dataStore.Mu.RLock()
+	ph.dataStore.Mu.RUnlock()
 
 	switch stat {
 	case "blocks-placed":
-		json.Write(w, http.StatusOK, ph.statLeaderboards.BlocksPlacedLeaderboard[uuid])
+		json.Write(w, http.StatusOK, ph.dataStore.StatLeaderboards.BlocksPlacedLeaderboard[uuid])
 	case "blocks-broken":
-		json.Write(w, http.StatusOK, ph.statLeaderboards.BlocksBrokenLeaderboard[uuid])
+		json.Write(w, http.StatusOK, ph.dataStore.StatLeaderboards.BlocksBrokenLeaderboard[uuid])
 	case "diamonds-mined":
-		json.Write(w, http.StatusOK, ph.statLeaderboards.DiamondsMinedLeaderboard[uuid])
+		json.Write(w, http.StatusOK, ph.dataStore.StatLeaderboards.DiamondsMinedLeaderboard[uuid])
 	case "time-played":
-		json.Write(w, http.StatusOK, ph.statLeaderboards.TimePlayedLeaderboard[uuid])
+		json.Write(w, http.StatusOK, ph.dataStore.StatLeaderboards.TimePlayedLeaderboard[uuid])
 	case "pvp-kills":
-		json.Write(w, http.StatusOK, ph.statLeaderboards.PvpKillsLeaderboard[uuid])
+		json.Write(w, http.StatusOK, ph.dataStore.StatLeaderboards.PvpKillsLeaderboard[uuid])
 	case "deaths":
-		json.Write(w, http.StatusOK, ph.statLeaderboards.DeathsLeaderboard[uuid])
+		json.Write(w, http.StatusOK, ph.dataStore.StatLeaderboards.DeathsLeaderboard[uuid])
 	case "mob-kills":
-		json.Write(w, http.StatusOK, ph.statLeaderboards.MobKillsLeaderboard[uuid])
+		json.Write(w, http.StatusOK, ph.dataStore.StatLeaderboards.MobKillsLeaderboard[uuid])
 	case "pvp-kd-ratio":
-		json.Write(w, http.StatusOK, ph.statLeaderboards.PvpKdRatioLeaderboard[uuid])
+		json.Write(w, http.StatusOK, ph.dataStore.StatLeaderboards.PvpKdRatioLeaderboard[uuid])
 	default:
 		json.Write(w, http.StatusNotFound, nil)
 	}
