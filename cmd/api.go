@@ -59,7 +59,7 @@ func (app application) mount() http.Handler {
 	go func() {
 		ticker := time.NewTicker(10 * time.Minute)
 		for range ticker.C {
-			slog.Log(context.Background(), slog.LevelInfo, "Updating mapping data & leaderboard...")
+			slog.Log(context.Background(), slog.LevelInfo, "Updating cache...")
 			dataStore.Mu.Lock()
 			mappingHandler.LoadMappingData(context.Background())
 			playerHandler.Load(context.Background())
@@ -75,8 +75,11 @@ func (app application) mount() http.Handler {
 	// players
 	r.Get("/api/players/{uuid}", playerHandler.GetServerPlayer)
 	r.Get("/api/players/leaderboards/server", playerHandler.ListServerLeaderboard)
+	r.Get("/api/players/leaderboards/server/top-ten", playerHandler.ListServerTopTen)
 	r.Get("/api/players/leaderboards/combat", playerHandler.ListCombatLeaderboard)
+	r.Get("/api/players/leaderboards/combat/top-ten", playerHandler.ListCombatTopTen)
 	r.Get("/api/players/leaderboards/crafting", playerHandler.ListCraftingLeaderboard)
+	r.Get("/api/players/leaderboards/crafting/top-ten", playerHandler.ListCraftingTopTen)
 	r.Get("/api/players/leaderboards/story", playerHandler.ListStoryLeaderboard)
 	r.Get("/api/players/leaderboards/combat/{uuid}", playerHandler.GetCombatLeaderboardPlayer)
 	r.Get("/api/players/leaderboards/crafting/{uuid}", playerHandler.GetCraftingLeaderboardPlayer)
