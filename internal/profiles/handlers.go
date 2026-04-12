@@ -28,6 +28,38 @@ func NewHandler(service Service, ds *cache.DataStore) *profileHandler {
 	}
 }
 
+func (ph *profileHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
+	uuid := chi.URLParam(r, "uuid")
+	ph.dataStore.Mu.RLock()
+	player, ok := ph.dataStore.Players[uuid]
+	if !ok {
+		json.Write(w, http.StatusNotFound, nil)
+		ph.dataStore.Mu.RUnlock()
+		return
+	}
+	ph.dataStore.Mu.RUnlock()
+	// model player profile from data in cache
+	profile := responsemodels.PlayerProfile{
+		Player:       player,
+		CombatRank:   ph.dataStore.CombatLeaderboard[uuid].Rank,
+		CraftingRank: ph.dataStore.CraftingLeaderboard[uuid].Rank,
+		StoryRank:    ph.dataStore.StoryLeaderboard[uuid].Rank,
+		StatLeaderboardPlayer: responsemodels.StatLeaderboardPlayer{
+			Uuid:              uuid,
+			BlocksPlacedRank:  ph.dataStore.StatLeaderboards.BlocksPlacedLeaderboard[uuid].Rank,
+			BlocksBrokenRank:  ph.dataStore.StatLeaderboards.BlocksBrokenLeaderboard[uuid].Rank,
+			DiamondsMinedRank: ph.dataStore.StatLeaderboards.DiamondsMinedLeaderboard[uuid].Rank,
+			TimePlayedRank:    ph.dataStore.StatLeaderboards.TimePlayedLeaderboard[uuid].Rank,
+			PvpKillsRank:      ph.dataStore.StatLeaderboards.PvpKillsLeaderboard[uuid].Rank,
+			DeathsRank:        ph.dataStore.StatLeaderboards.DeathsLeaderboard[uuid].Rank,
+			MobKillsRank:      ph.dataStore.StatLeaderboards.MobKillsLeaderboard[uuid].Rank,
+			PvpKdRatioRank:    ph.dataStore.StatLeaderboards.PvpKdRatioLeaderboard[uuid].Rank,
+		},
+	}
+
+	json.Write(w, http.StatusOK, profile)
+}
+
 func (ph *profileHandler) GetMobKillChartData(w http.ResponseWriter, r *http.Request) {
 	uuid := chi.URLParam(r, "uuid")
 	data := []responsemodels.SingleDailyChartItem{}
@@ -108,7 +140,7 @@ func (ph *profileHandler) GetBlocksBrokenPieChartData(w http.ResponseWriter, r *
 	}
 
 	// consolidate into 'others' category
-	if len(data) > 6 {
+	if len(data) > 10 {
 		sort.Slice(data, func(i, j int) bool {
 			if data[i].Value > data[j].Value {
 				return true
@@ -116,13 +148,13 @@ func (ph *profileHandler) GetBlocksBrokenPieChartData(w http.ResponseWriter, r *
 			return false
 		})
 
-		data[5].Block = "others"
+		data[9].Block = "others"
 
-		for i := 6; i < len(data); i++ {
-			data[5].Value += data[i].Value
+		for i := 10; i < len(data); i++ {
+			data[9].Value += data[i].Value
 		}
 
-		data = slices.Delete(data, 6, len(data))
+		data = slices.Delete(data, 10, len(data))
 	}
 
 	blockChart := responsemodels.BlockChart{

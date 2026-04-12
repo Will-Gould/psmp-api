@@ -109,6 +109,7 @@ func (app application) mount() http.Handler {
 	r.Get("/api/players/leaderboards/biggest-builder", playerHandler.GetBiggestBuilder)
 
 	// profiles
+	r.Get("/api/profiles/{uuid}", profileHandler.GetProfile)
 	r.Get("/api/profiles/{uuid}/daily-mob-kill-chart", profileHandler.GetMobKillChartData)
 	r.Get("/api/profiles/{uuid}/blocks-broken-pie-chart", profileHandler.GetBlocksBrokenPieChartData)
 	r.Get("/api/profiles/{uuid}/total-blocks-chart", profileHandler.GetTotalBlocksChart)
