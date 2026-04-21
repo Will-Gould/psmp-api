@@ -10,6 +10,7 @@ import (
 
 type Querier interface {
 	CountDeathsById(ctx context.Context, playerID int32) (int64, error)
+	CountDiamondsMinedById(ctx context.Context, playerID int32) (int64, error)
 	CountMobsKilledById(ctx context.Context, playerID int32) (int64, error)
 	CountPvpKillsById(ctx context.Context, playerID int32) (int64, error)
 	CountSpecificMobKillsById(ctx context.Context, arg CountSpecificMobKillsByIdParams) (int64, error)
@@ -23,6 +24,7 @@ type Querier interface {
 	ListBlocksPlacedByUser(ctx context.Context, user int32) ([]Block, error)
 	ListCausesOfDeath(ctx context.Context) ([]PsmpstatsCause, error)
 	ListDeathsById(ctx context.Context, playerID int32) ([]PsmpstatsDeath, error)
+	ListDiamondsMinedById(ctx context.Context, playerID int32) ([]PsmpstatsDiamondsMined, error)
 	ListLuckpermsPlayers(ctx context.Context) ([]LuckpermsPlayer, error)
 	ListMaterials(ctx context.Context) ([]Material, error)
 	ListMobKillsById(ctx context.Context, playerID int32) ([]PsmpstatsMobKill, error)

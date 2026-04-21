@@ -26,6 +26,22 @@ func (q *Queries) CountDeathsById(ctx context.Context, playerID int32) (int64, e
 	return count, err
 }
 
+const countDiamondsMinedById = `-- name: CountDiamondsMinedById :one
+SELECT
+  COUNT(*)
+FROM
+  psmpstats_diamonds_mined
+WHERE
+  player_id = ?
+`
+
+func (q *Queries) CountDiamondsMinedById(ctx context.Context, playerID int32) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countDiamondsMinedById, playerID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countMobsKilledById = `-- name: CountMobsKilledById :one
 SELECT
   count(*)
@@ -241,6 +257,38 @@ func (q *Queries) ListDeathsById(ctx context.Context, playerID int32) ([]Psmpsta
 			&i.Z,
 			&i.Cause,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listDiamondsMinedById = `-- name: ListDiamondsMinedById :many
+SELECT
+  player_id, time
+FROM
+  psmpstats_diamonds_mined
+WHERE
+  player_id = ?
+`
+
+func (q *Queries) ListDiamondsMinedById(ctx context.Context, playerID int32) ([]PsmpstatsDiamondsMined, error) {
+	rows, err := q.db.QueryContext(ctx, listDiamondsMinedById, playerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PsmpstatsDiamondsMined
+	for rows.Next() {
+		var i PsmpstatsDiamondsMined
+		if err := rows.Scan(&i.PlayerID, &i.Time); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

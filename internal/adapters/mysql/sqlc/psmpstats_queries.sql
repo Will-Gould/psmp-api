@@ -107,4 +107,20 @@ LEFT JOIN
 ON
   psmpstats_advancements.id = psmpstats_player_advancements.advancement
 WHERE
-  psmpstats_player_advancements.player_id = ?
+  psmpstats_player_advancements.player_id = ?;
+
+-- name: CountDiamondsMinedById :one
+SELECT
+  COUNT(*)
+FROM
+  psmpstats_diamonds_mined
+WHERE
+  player_id = ?;
+
+-- name: ListDiamondsMinedById :many
+SELECT
+  *
+FROM
+  psmpstats_diamonds_mined
+WHERE
+  player_id = ?;
