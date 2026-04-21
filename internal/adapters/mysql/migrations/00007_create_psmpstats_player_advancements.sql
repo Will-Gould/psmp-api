@@ -1,6 +1,6 @@
 -- +goose Up
 CREATE TABLE IF NOT EXISTS psmpstats_player_advancements(
-    player_uuid varchar(36) NOT NULL,
+    player_id INT NOT NULL,
     time INT NOT NULL,
     advancement INT NOT NULL
 );
