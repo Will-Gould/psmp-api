@@ -22,6 +22,7 @@ type Service interface {
 	ListAdvancementsByPlayer(ctx context.Context, id int32) ([]repo.PsmpstatsAdvancement, error)
 	ListLuckpermsPlayers(ctx context.Context) ([]repo.LuckpermsPlayer, error)
 	ListMobKillsByPlayer(ctx context.Context, id int32) ([]repo.PsmpstatsMobKill, error)
+	CountDiamondsMinedByPlayer(ctx context.Context, id int32) (int64, error)
 }
 
 type svc struct {
@@ -106,4 +107,8 @@ func (s svc) ListLuckpermsPlayers(ctx context.Context) ([]repo.LuckpermsPlayer, 
 
 func (s svc) ListMobKillsByPlayer(ctx context.Context, id int32) ([]repo.PsmpstatsMobKill, error) {
 	return s.repo.ListMobKillsById(ctx, id)
+}
+
+func (s svc) CountDiamondsMinedByPlayer(ctx context.Context, id int32) (int64, error) {
+	return s.repo.CountDiamondsMinedById(ctx, id)
 }

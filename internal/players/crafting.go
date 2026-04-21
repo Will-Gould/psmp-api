@@ -31,7 +31,10 @@ func (ph *playerHandler) getCraftingOverview(ctx context.Context, glId int32, ps
 	}
 
 	// get diamonds mined
-	var diamondsMined int64 = 0
+	diamondsMined, err := ph.service.CountDiamondsMinedByPlayer(ctx, psmpStatsId)
+	if err != nil {
+		diamondsMined = 0
+	}
 
 	// calculate crafting score
 	craftingScore := calculateCraftingScore(float64(blocksBroken), float64(blocksPlaced), float64(timePlayed), float64(diamondsMined))
