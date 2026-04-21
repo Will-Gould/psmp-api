@@ -1,7 +1,7 @@
 -- +goose Up
 CREATE TABLE IF NOT EXISTS psmpstats_players(
     id INT PRIMARY KEY,
-    uuid varchar(36) UNIQUE
+    uuid varchar(36) UNIQUE NOT NULL
 );
 
 -- +goose Down

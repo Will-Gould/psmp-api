@@ -11,12 +11,12 @@ type Service interface {
 	ListBlocksBrokenByUser(ctx context.Context, id int32) ([]repo.Block, error)
 	ListBlocksPlacedByUser(ctx context.Context, id int32) ([]repo.Block, error)
 	ListSessionDataByUser(ctx context.Context, id int32) ([]repo.Session, error)
-	ListDeathsByPlayer(ctx context.Context, uuid string) ([]repo.PsmpstatsDeath, error)
-	CountSpecificMobKillsByUuid(ctx context.Context, name string, uuid string) (int64, error)
+	ListDeathsByPlayer(ctx context.Context, id int32) ([]repo.PsmpstatsDeath, error)
+	CountSpecificMobKillsByPlayer(ctx context.Context, name string, id int32) (int64, error)
 	FindPsmpstatsPlayerByUuid(ctx context.Context, uuid string) (repo.PsmpstatsPlayer, error)
 	FindLuckpermsPlayer(ctx context.Context, uuid string) (repo.LuckpermsPlayer, error)
-	ListAdvancementsByPlayer(ctx context.Context, uuid string) ([]repo.PsmpstatsAdvancement, error)
-	ListMobKillsByUuid(ctx context.Context, uuid string) ([]repo.PsmpstatsMobKill, error)
+	ListAdvancementsByPlayer(ctx context.Context, id int32) ([]repo.PsmpstatsAdvancement, error)
+	ListMobKillsByPlayer(ctx context.Context, id int32) ([]repo.PsmpstatsMobKill, error)
 	GroupCountBlocksByUser(ctx context.Context, id int32, action int32, banned []int32) ([]repo.GroupCountBlocksPlacedByUserRow, error)
 	ListBlocksByUser(ctx context.Context, id int32, action int32, banned []int32) ([]repo.Block, error)
 }
@@ -30,10 +30,10 @@ func NewService(repo repo.Querier) Service {
 }
 
 // CountSpecificMobKillsByUuid implements [Service].
-func (s *svc) CountSpecificMobKillsByUuid(ctx context.Context, name string, uuid string) (int64, error) {
-	return s.repo.CountSpecificMobKillsByUuid(ctx, repo.CountSpecificMobKillsByUuidParams{
-		PlayerUuid: uuid,
-		Name:       name,
+func (s *svc) CountSpecificMobKillsByPlayer(ctx context.Context, name string, id int32) (int64, error) {
+	return s.repo.CountSpecificMobKillsById(ctx, repo.CountSpecificMobKillsByIdParams{
+		PlayerID: id,
+		Name:     name,
 	})
 }
 
@@ -53,8 +53,8 @@ func (s *svc) FindPsmpstatsPlayerByUuid(ctx context.Context, uuid string) (repo.
 }
 
 // ListAdvancementsByPlayer implements [Service].
-func (s *svc) ListAdvancementsByPlayer(ctx context.Context, uuid string) ([]repo.PsmpstatsAdvancement, error) {
-	rows, err := s.repo.ListAdvancementsByUuid(ctx, uuid)
+func (s *svc) ListAdvancementsByPlayer(ctx context.Context, id int32) ([]repo.PsmpstatsAdvancement, error) {
+	rows, err := s.repo.ListAdvancementsById(ctx, id)
 	advancements := []repo.PsmpstatsAdvancement{}
 	if err != nil {
 		return advancements, err
@@ -80,13 +80,13 @@ func (s *svc) ListBlocksPlacedByUser(ctx context.Context, id int32) ([]repo.Bloc
 }
 
 // ListDeathsByPlayer implements [Service].
-func (s *svc) ListDeathsByPlayer(ctx context.Context, uuid string) ([]repo.PsmpstatsDeath, error) {
-	return s.repo.ListDeathsByUuid(ctx, uuid)
+func (s *svc) ListDeathsByPlayer(ctx context.Context, id int32) ([]repo.PsmpstatsDeath, error) {
+	return s.repo.ListDeathsById(ctx, id)
 }
 
 // ListMobKillsByUuid implements [Service].
-func (s *svc) ListMobKillsByUuid(ctx context.Context, uuid string) ([]repo.PsmpstatsMobKill, error) {
-	return s.repo.ListMobKillsByUuid(ctx, uuid)
+func (s *svc) ListMobKillsByPlayer(ctx context.Context, id int32) ([]repo.PsmpstatsMobKill, error) {
+	return s.repo.ListMobKillsById(ctx, id)
 }
 
 // ListSessionDataByUser implements [Service].

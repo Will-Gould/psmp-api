@@ -97,37 +97,37 @@ func (ph *playerHandler) loadServerLeaderboard(ctx context.Context, md *cache.Ma
 	// build overviews
 	for _, p := range luckpermsPlayers {
 		glUser, err := ph.service.FindGriefLoggerUser(ctx, p.Uuid)
+		psmpStatsPlayer, err := ph.service.FindPsmpstatsPlayerByUuid(ctx, p.Uuid)
 		if err != nil {
 			continue
 		}
 		player := &responsemodels.ServerPlayer{
 			Uuid:         p.Uuid,
 			Name:         glUser.Name,
-			GlId:         glUser.ID,
 			PrimaryGroup: p.PrimaryGroup,
 		}
-		ph.getPlayerData(ctx, player, md)
+		ph.getPlayerData(ctx, player, md, glUser.ID, psmpStatsPlayer.ID)
 
 		ph.dataStore.Players[player.Uuid] = *player
 	}
 }
 
-func (ph *playerHandler) getPlayerData(ctx context.Context, player *responsemodels.ServerPlayer, md *cache.MappingData) {
+func (ph *playerHandler) getPlayerData(ctx context.Context, player *responsemodels.ServerPlayer, md *cache.MappingData, glId int32, psmpStatsId int32) {
 
 	// get combat overview
-	combatOverview, err := ph.getCombatOverview(ctx, player.Uuid)
+	combatOverview, err := ph.getCombatOverview(ctx, psmpStatsId)
 	if err != nil {
 		slog.Log(ctx, slog.LevelError, err.Error())
 	}
 
 	// get crafting overview
-	craftingOverview, err := ph.getCraftingOverview(ctx, player.Uuid, player.GlId, md)
+	craftingOverview, err := ph.getCraftingOverview(ctx, glId, psmpStatsId, md)
 	if err != nil {
 		slog.Log(ctx, slog.LevelError, err.Error())
 	}
 
 	// get story overview
-	storyOverview, err := ph.getStoryOverview(ctx, player.Uuid)
+	storyOverview, err := ph.getStoryOverview(ctx, psmpStatsId)
 	if err != nil {
 		slog.Log(ctx, slog.LevelError, err.Error())
 	}
