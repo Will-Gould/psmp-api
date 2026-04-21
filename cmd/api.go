@@ -69,7 +69,7 @@ func (app application) mount() http.Handler {
 	mappingHandler.LoadMappingData(context.Background())
 	playerHandler.Load(context.Background())
 
-	// schedule player list & leaderboard updates
+	// create go routine for cache updates
 	go func() {
 		ticker := time.NewTicker(10 * time.Minute)
 		for range ticker.C {
