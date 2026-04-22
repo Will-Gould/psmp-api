@@ -7,6 +7,7 @@ import (
 	"sort"
 	"time"
 
+	repo "github.com/Will-Gould/psmp-api/internal/adapters/mysql/sqlc"
 	"github.com/Will-Gould/psmp-api/internal/cache"
 	"github.com/Will-Gould/psmp-api/internal/json"
 	"github.com/Will-Gould/psmp-api/internal/mapping"
@@ -62,13 +63,15 @@ func (ph *profileHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 
 func (ph *profileHandler) GetMobKillChartData(w http.ResponseWriter, r *http.Request) {
 	uuid := chi.URLParam(r, "uuid")
+
 	psmpStatsPlayer, err := ph.service.FindPsmpstatsPlayerByUuid(r.Context(), uuid)
+	glUser, err := ph.service.FindGriefLoggerUser(r.Context(), uuid)
+	firstJoin, err := ph.service.FindFirstJoinByUser(r.Context(), glUser.ID)
 	if err != nil {
 		json.Write(w, http.StatusNotFound, nil)
 		return
 	}
 
-	data := []responsemodels.SingleDailyChartItem{}
 	mobKills, err := ph.service.ListMobKillsByPlayer(r.Context(), psmpStatsPlayer.ID)
 	if err != nil {
 		slog.Log(r.Context(), slog.LevelError, err.Error())
@@ -81,18 +84,7 @@ func (ph *profileHandler) GetMobKillChartData(w http.ResponseWriter, r *http.Req
 		return false
 	})
 
-	firstKillTime := time.Unix(int64(mobKills[0].Time), 0).Local()
-	earliestMidnight := firstKillTime.Truncate(24 * time.Hour)
-	nextDay := time.Now().AddDate(0, 0, 1).Local()
-	nextMidnight := nextDay.Truncate(24 * time.Hour)
-	// initialise value for each date between now and first kill
-	for d := earliestMidnight; !d.After(nextMidnight); d = d.AddDate(0, 0, 1) {
-		dateString := d.Local().Format(DATE_FORMAT)
-		data = append(data, responsemodels.SingleDailyChartItem{
-			Date:  dateString,
-			Value: 0,
-		})
-	}
+	data := getAllTimeSingleDailySlice(firstJoin)
 
 	for _, k := range mobKills {
 		killDate := time.Unix(int64(k.Time), 0).Local().Format(DATE_FORMAT)
@@ -249,13 +241,15 @@ func (ph *profileHandler) GetTotalBlocksChart(w http.ResponseWriter, r *http.Req
 
 func (ph *profileHandler) GetDeathsChart(w http.ResponseWriter, r *http.Request) {
 	uuid := chi.URLParam(r, "uuid")
+
 	psmpStatsPlayer, err := ph.service.FindPsmpstatsPlayerByUuid(r.Context(), uuid)
+	glUser, err := ph.service.FindGriefLoggerUser(r.Context(), uuid)
+	firstJoin, err := ph.service.FindFirstJoinByUser(r.Context(), glUser.ID)
 	if err != nil {
 		json.Write(w, http.StatusNotFound, nil)
 		return
 	}
 
-	data := []responsemodels.SingleDailyChartItem{}
 	deaths, err := ph.service.ListDeathsByPlayer(r.Context(), psmpStatsPlayer.ID)
 	if err != nil {
 		slog.Log(r.Context(), slog.LevelError, err.Error())
@@ -268,18 +262,7 @@ func (ph *profileHandler) GetDeathsChart(w http.ResponseWriter, r *http.Request)
 		return false
 	})
 
-	firstDeathTime := time.Unix(int64(deaths[0].Time), 0).Local()
-	earliestMidnight := firstDeathTime.Truncate(24 * time.Hour)
-	nextDay := time.Now().AddDate(0, 0, 1).Local()
-	nextMidnight := nextDay.Truncate(24 * time.Hour)
-	// initialise value for each date between now and first kill
-	for d := earliestMidnight; !d.After(nextMidnight); d = d.AddDate(0, 0, 1) {
-		dateString := d.Local().Format(DATE_FORMAT)
-		data = append(data, responsemodels.SingleDailyChartItem{
-			Date:  dateString,
-			Value: 0,
-		})
-	}
+	data := getAllTimeSingleDailySlice(firstJoin)
 
 	for _, k := range deaths {
 		deathDate := time.Unix(int64(k.Time), 0).Local().Format(DATE_FORMAT)
@@ -318,4 +301,24 @@ func (ph *profileHandler) findMaterialName(id int32) string {
 		}
 	}
 	return ""
+}
+
+func getAllTimeSingleDailySlice(firstJoin repo.Session) []responsemodels.SingleDailyChartItem {
+	data := []responsemodels.SingleDailyChartItem{}
+
+	firstTime := time.Unix(int64(firstJoin.Time/1000), 0).Local()
+	earliestMidnight := firstTime.Truncate(24 * time.Hour)
+
+	nextDay := time.Now().AddDate(0, 0, 1).Local()
+	nextMidnight := nextDay.Truncate(24 * time.Hour)
+	// initialise value for each date between now and first join
+	for d := earliestMidnight; !d.After(nextMidnight); d = d.AddDate(0, 0, 1) {
+		dateString := d.Local().Format(DATE_FORMAT)
+		data = append(data, responsemodels.SingleDailyChartItem{
+			Date:  dateString,
+			Value: 0,
+		})
+	}
+
+	return data
 }

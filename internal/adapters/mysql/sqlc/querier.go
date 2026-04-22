@@ -14,6 +14,7 @@ type Querier interface {
 	CountMobsKilledById(ctx context.Context, playerID int32) (int64, error)
 	CountPvpKillsById(ctx context.Context, playerID int32) (int64, error)
 	CountSpecificMobKillsById(ctx context.Context, arg CountSpecificMobKillsByIdParams) (int64, error)
+	FindFirstJoinByUser(ctx context.Context, user int32) (Session, error)
 	FindGriefLoggerUserByUuid(ctx context.Context, uuid string) (User, error)
 	FindLuckpermsPlayerByUuid(ctx context.Context, uuid string) (LuckpermsPlayer, error)
 	FindPsmpstatsPlayerByUuid(ctx context.Context, uuid string) (PsmpstatsPlayer, error)

@@ -65,3 +65,15 @@ AND
   action = 1
 GROUP BY
   type;
+
+-- name: FindFirstJoinByUser :one
+SELECT
+  *
+FROM
+  sessions
+WHERE
+  user = ?
+ORDER BY
+  time
+ASC
+LIMIT 1;
