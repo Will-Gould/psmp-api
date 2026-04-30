@@ -10,7 +10,7 @@ import (
 	responsemodels "github.com/Will-Gould/psmp-api/internal/response_models"
 )
 
-func (ph *playerHandler) getCraftingOverview(ctx context.Context, uuid string, glId int32, md *cache.MappingData) (responsemodels.CraftingOverview, error) {
+func (ph *playerHandler) getCraftingOverview(ctx context.Context, glId int32, psmpStatsId int32, md *cache.MappingData) (responsemodels.CraftingOverview, error) {
 	// count blocks
 	blocksBroken, err := ph.service.CountBlocksByUser(ctx, glId, mapping.BLOCK_BROKEN_ACTION, md.BannedBrokenMaterials)
 	if err != nil {
@@ -31,22 +31,19 @@ func (ph *playerHandler) getCraftingOverview(ctx context.Context, uuid string, g
 	}
 
 	// get diamonds mined
-	var diamondMined int64
-	psmpstatsPlayer, err := ph.service.FindPsmpstatsPlayerByUuid(ctx, uuid)
+	diamondsMined, err := ph.service.CountDiamondsMinedByPlayer(ctx, psmpStatsId)
 	if err != nil {
-		diamondMined = 0
-	} else {
-		diamondMined = int64(psmpstatsPlayer.DiamondsMined)
+		diamondsMined = 0
 	}
 
 	// calculate crafting score
-	craftingScore := calculateCraftingScore(float64(blocksBroken), float64(blocksPlaced), float64(timePlayed), float64(diamondMined))
+	craftingScore := calculateCraftingScore(float64(blocksBroken), float64(blocksPlaced), float64(timePlayed), float64(diamondsMined))
 
 	return responsemodels.CraftingOverview{
 		CraftingScore: craftingScore,
 		BlocksPlaced:  blocksPlaced,
 		BlocksBroken:  blocksBroken,
-		DiamondsMined: diamondMined,
+		DiamondsMined: diamondsMined,
 		TimePlayed:    timePlayed,
 	}, nil
 }

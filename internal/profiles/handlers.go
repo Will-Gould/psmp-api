@@ -62,8 +62,14 @@ func (ph *profileHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 
 func (ph *profileHandler) GetMobKillChartData(w http.ResponseWriter, r *http.Request) {
 	uuid := chi.URLParam(r, "uuid")
+	psmpStatsPlayer, err := ph.service.FindPsmpstatsPlayerByUuid(r.Context(), uuid)
+	if err != nil {
+		json.Write(w, http.StatusNotFound, nil)
+		return
+	}
+
 	data := []responsemodels.SingleDailyChartItem{}
-	mobKills, err := ph.service.ListMobKillsByUuid(r.Context(), uuid)
+	mobKills, err := ph.service.ListMobKillsByPlayer(r.Context(), psmpStatsPlayer.ID)
 	if err != nil {
 		slog.Log(r.Context(), slog.LevelError, err.Error())
 		return
@@ -243,8 +249,14 @@ func (ph *profileHandler) GetTotalBlocksChart(w http.ResponseWriter, r *http.Req
 
 func (ph *profileHandler) GetDeathsChart(w http.ResponseWriter, r *http.Request) {
 	uuid := chi.URLParam(r, "uuid")
+	psmpStatsPlayer, err := ph.service.FindPsmpstatsPlayerByUuid(r.Context(), uuid)
+	if err != nil {
+		json.Write(w, http.StatusNotFound, nil)
+		return
+	}
+
 	data := []responsemodels.SingleDailyChartItem{}
-	deaths, err := ph.service.ListDeathsByPlayer(r.Context(), uuid)
+	deaths, err := ph.service.ListDeathsByPlayer(r.Context(), psmpStatsPlayer.ID)
 	if err != nil {
 		slog.Log(r.Context(), slog.LevelError, err.Error())
 		return

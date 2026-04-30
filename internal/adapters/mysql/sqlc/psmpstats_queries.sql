@@ -24,69 +24,69 @@ SELECT
 FROM
   psmpstats_mobs;
 
--- name: ListPlayerAdvancementsByUuid :many
+-- name: ListPlayerAdvancementsById :many
 SELECT
   *
 FROM
   psmpstats_player_advancements
 WHERE
-  player_uuid = ?;
+  player_id = ?;
 
--- name: ListDeathsByUuid :many
+-- name: ListDeathsById :many
 SELECT
   *
 FROM
   psmpstats_deaths
 WHERE
-  player_uuid = ?;
+  player_id = ?;
 
--- name: ListPvpKillsByUuid :many
+-- name: ListPvpKillsById :many
 SELECT
  *
 FROM
   psmpstats_combat
 WHERE
-  player_uuid = ?;
+  player_id = ?;
 
--- name: ListMobKillsByUuid :many
+-- name: ListMobKillsById :many
 SELECT
   *
 FROM
   psmpstats_mob_kills
 WHERE
-  player_uuid = ?;
+  player_id = ?;
 
--- name: CountDeathsByUuid :one
+-- name: CountDeathsById :one
 SELECT
   count(*)
 FROM
   psmpstats_deaths
 WHERE
-  player_uuid = ?;
+  player_id = ?;
 
--- name: CountPvpKillsByUuid :one
+-- name: CountPvpKillsById :one
 SELECT
   count(*)
 FROM
   psmpstats_combat
 WHERE
-  player_uuid = ?;
+  player_id = ?;
 
--- name: CountMobsKilledByUuid :one
+-- name: CountMobsKilledById :one
 SELECT
   count(*)
 FROM
   psmpstats_mob_kills
 WHERE
-  player_uuid = ?;
+  player_id = ?;
 
--- name: CountSpecificMobKillsByUuid :one
+-- name: CountSpecificMobKillsById :one
 SELECT
   count(*)
 FROM
   psmpstats_mob_kills
 WHERE
-  player_uuid = ?
+  player_id = ?
 AND
   mob = (
     SELECT
@@ -97,7 +97,7 @@ AND
       name = ?
   );
 
--- name: ListAdvancementsByUuid :many
+-- name: ListAdvancementsById :many
 SELECT
   *
 FROM
@@ -107,4 +107,20 @@ LEFT JOIN
 ON
   psmpstats_advancements.id = psmpstats_player_advancements.advancement
 WHERE
-  psmpstats_player_advancements.player_uuid = ?
+  psmpstats_player_advancements.player_id = ?;
+
+-- name: CountDiamondsMinedById :one
+SELECT
+  COUNT(*)
+FROM
+  psmpstats_diamonds_mined
+WHERE
+  player_id = ?;
+
+-- name: ListDiamondsMinedById :many
+SELECT
+  *
+FROM
+  psmpstats_diamonds_mined
+WHERE
+  player_id = ?;

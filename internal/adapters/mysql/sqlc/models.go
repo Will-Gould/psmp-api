@@ -37,23 +37,28 @@ type PsmpstatsCause struct {
 }
 
 type PsmpstatsCombat struct {
-	PlayerUuid string `json:"player_uuid"`
-	VictimUuid string `json:"victim_uuid"`
-	Time       int32  `json:"time"`
-	World      string `json:"world"`
-	X          int32  `json:"x"`
-	Y          int32  `json:"y"`
-	Z          int32  `json:"z"`
+	PlayerID int32  `json:"player_id"`
+	VictimID int32  `json:"victim_id"`
+	Time     int32  `json:"time"`
+	World    string `json:"world"`
+	X        int32  `json:"x"`
+	Y        int32  `json:"y"`
+	Z        int32  `json:"z"`
 }
 
 type PsmpstatsDeath struct {
-	PlayerUuid string `json:"player_uuid"`
-	Time       int32  `json:"time"`
-	World      string `json:"world"`
-	X          int32  `json:"x"`
-	Y          int32  `json:"y"`
-	Z          int32  `json:"z"`
-	Cause      int32  `json:"cause"`
+	PlayerID int32  `json:"player_id"`
+	Time     int32  `json:"time"`
+	World    string `json:"world"`
+	X        int32  `json:"x"`
+	Y        int32  `json:"y"`
+	Z        int32  `json:"z"`
+	Cause    int32  `json:"cause"`
+}
+
+type PsmpstatsDiamondsMined struct {
+	PlayerID int32 `json:"player_id"`
+	Time     int32 `json:"time"`
 }
 
 type PsmpstatsMob struct {
@@ -62,24 +67,24 @@ type PsmpstatsMob struct {
 }
 
 type PsmpstatsMobKill struct {
-	PlayerUuid string `json:"player_uuid"`
-	Time       int32  `json:"time"`
-	World      string `json:"world"`
-	X          int32  `json:"x"`
-	Y          int32  `json:"y"`
-	Z          int32  `json:"z"`
-	Mob        int32  `json:"mob"`
+	PlayerID int32  `json:"player_id"`
+	Time     int32  `json:"time"`
+	World    string `json:"world"`
+	X        int32  `json:"x"`
+	Y        int32  `json:"y"`
+	Z        int32  `json:"z"`
+	Mob      int32  `json:"mob"`
 }
 
 type PsmpstatsPlayer struct {
-	Uuid          string `json:"uuid"`
-	DiamondsMined int32  `json:"diamonds_mined"`
+	ID   int32  `json:"id"`
+	Uuid string `json:"uuid"`
 }
 
 type PsmpstatsPlayerAdvancement struct {
-	PlayerUuid  string `json:"player_uuid"`
-	Time        int32  `json:"time"`
-	Advancement int32  `json:"advancement"`
+	PlayerID    int32 `json:"player_id"`
+	Time        int32 `json:"time"`
+	Advancement int32 `json:"advancement"`
 }
 
 type Session struct {

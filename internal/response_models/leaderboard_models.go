@@ -3,7 +3,6 @@ package responsemodels
 type ServerPlayer struct {
 	Uuid             string
 	Name             string
-	GlId             int32
 	PrimaryGroup     string
 	ServerRank       int64
 	CraftingOverview CraftingOverview
