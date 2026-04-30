@@ -5,9 +5,7 @@ import (
 	"net/http"
 	"slices"
 	"sort"
-	"time"
 
-	repo "github.com/Will-Gould/psmp-api/internal/adapters/mysql/sqlc"
 	"github.com/Will-Gould/psmp-api/internal/cache"
 	"github.com/Will-Gould/psmp-api/internal/json"
 	"github.com/Will-Gould/psmp-api/internal/mapping"
@@ -61,7 +59,7 @@ func (ph *profileHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 	json.Write(w, http.StatusOK, profile)
 }
 
-func (ph *profileHandler) GetMobKillChartData(w http.ResponseWriter, r *http.Request) {
+func (ph *profileHandler) GetMobKillChart(w http.ResponseWriter, r *http.Request) {
 	uuid := chi.URLParam(r, "uuid")
 
 	psmpStatsPlayer, err := ph.service.FindPsmpstatsPlayerByUuid(r.Context(), uuid)
@@ -77,46 +75,13 @@ func (ph *profileHandler) GetMobKillChartData(w http.ResponseWriter, r *http.Req
 		slog.Log(r.Context(), slog.LevelError, err.Error())
 		return
 	}
-	sort.Slice(mobKills, func(i, j int) bool {
-		if mobKills[i].Time < mobKills[j].Time {
-			return true
-		}
-		return false
-	})
 
-	data := getAllTimeSingleDailySlice(firstJoin)
-
-	for _, k := range mobKills {
-		killDate := time.Unix(int64(k.Time), 0).Local().Format(DATE_FORMAT)
-		for i, d := range data {
-			if d.Date == killDate {
-				data[i].Value += 1
-				continue
-			}
-		}
-	}
-
-	// calculate trend over last two intervals
-	var trend float64 = 0
-	if len(data) > 1 {
-		cur := data[len(data)-1].Value
-		base := data[len(data)-2].Value
-
-		if base > 0 {
-			trend = ((float64(cur) - float64(base)) / float64(base)) * 100
-		}
-	}
-
-	chart := responsemodels.SingleDailyChart{
-		Title:     "Mob Kills",
-		ChartData: data,
-		Trend:     trend,
-	}
+	chart := GetMobKillChartData(mobKills, firstJoin)
 
 	json.Write(w, http.StatusOK, chart)
 }
 
-func (ph *profileHandler) GetBlocksBrokenPieChartData(w http.ResponseWriter, r *http.Request) {
+func (ph *profileHandler) GetBlocksBrokenPieChart(w http.ResponseWriter, r *http.Request) {
 	uuid := chi.URLParam(r, "uuid")
 	data := []responsemodels.BlockChartItem{}
 
@@ -165,7 +130,6 @@ func (ph *profileHandler) GetBlocksBrokenPieChartData(w http.ResponseWriter, r *
 
 func (ph *profileHandler) GetTotalBlocksChart(w http.ResponseWriter, r *http.Request) {
 	uuid := chi.URLParam(r, "uuid")
-	data := []responsemodels.DoubleDailyChartItem{}
 
 	glUser, err := ph.service.FindGriefLoggerUser(r.Context(), uuid)
 	if err != nil {
@@ -185,56 +149,7 @@ func (ph *profileHandler) GetTotalBlocksChart(w http.ResponseWriter, r *http.Req
 	// combine block action into one slice & sort
 	blocks := append(blocksBroken, blocksPlaced...)
 
-	sort.Slice(blocks, func(i, j int) bool {
-		if blocks[i].Time < blocks[j].Time {
-			return true
-		}
-		return false
-	})
-	firstBlockTime := time.Unix(blocks[0].Time/1000, 0)
-	earliestMidnight := firstBlockTime.Truncate(24 * time.Hour)
-	nextDay := time.Now().AddDate(0, 0, 1).Local()
-	nextMidnight := nextDay.Truncate(24 * time.Hour)
-	// initialise value for each date between now & first block action
-	for d := earliestMidnight; !d.After(nextMidnight); d = d.AddDate(0, 0, 1) {
-		dateString := d.Local().Format(DATE_FORMAT)
-		data = append(data, responsemodels.DoubleDailyChartItem{
-			Date:   dateString,
-			Value1: 0,
-			Value2: 0,
-		})
-	}
-
-	for i, b := range blocks {
-		blockDate := time.Unix(blocks[i].Time/1000, 0).Format(DATE_FORMAT)
-		for j, d := range data {
-
-			if d.Date == blockDate {
-
-				if b.Action == mapping.BLOCK_PLACED_ACTION {
-					data[j].Value1 += 1
-				}
-				if b.Action == mapping.BLOCK_BROKEN_ACTION {
-					data[j].Value2 += 1
-				}
-			}
-		}
-	}
-
-	// combine date values so each day has a running total
-	for i := range data {
-		if i == 0 {
-			continue
-		}
-		data[i].Value1 += data[i-1].Value1
-		data[i].Value2 += data[i-1].Value2
-	}
-
-	chart := responsemodels.DoubleDailyChart{
-		Title:     "Total Blocks Placed vs Broken",
-		ChartData: data,
-		Trend:     0,
-	}
+	chart := GetTotalBlocksChartData(blocks)
 
 	json.Write(w, http.StatusOK, chart)
 }
@@ -255,41 +170,8 @@ func (ph *profileHandler) GetDeathsChart(w http.ResponseWriter, r *http.Request)
 		slog.Log(r.Context(), slog.LevelError, err.Error())
 		return
 	}
-	sort.Slice(deaths, func(i, j int) bool {
-		if deaths[i].Time < deaths[j].Time {
-			return true
-		}
-		return false
-	})
 
-	data := getAllTimeSingleDailySlice(firstJoin)
-
-	for _, k := range deaths {
-		deathDate := time.Unix(int64(k.Time), 0).Local().Format(DATE_FORMAT)
-		for i, d := range data {
-			if d.Date == deathDate {
-				data[i].Value += 1
-				continue
-			}
-		}
-	}
-
-	// calculate trend over last two intervals
-	var trend float64 = 0
-	if len(data) > 1 {
-		cur := data[len(data)-1].Value
-		base := data[len(data)-2].Value
-
-		if base > 0 {
-			trend = ((float64(cur) - float64(base)) / float64(base)) * 100
-		}
-	}
-
-	chart := responsemodels.SingleDailyChart{
-		Title:     "Deaths",
-		ChartData: data,
-		Trend:     trend,
-	}
+	chart := GetDeathsChartData(deaths, firstJoin)
 
 	json.Write(w, http.StatusOK, chart)
 }
@@ -301,24 +183,4 @@ func (ph *profileHandler) findMaterialName(id int32) string {
 		}
 	}
 	return ""
-}
-
-func getAllTimeSingleDailySlice(firstJoin repo.Session) []responsemodels.SingleDailyChartItem {
-	data := []responsemodels.SingleDailyChartItem{}
-
-	firstTime := time.Unix(int64(firstJoin.Time/1000), 0).Local()
-	earliestMidnight := firstTime.Truncate(24 * time.Hour)
-
-	nextDay := time.Now().AddDate(0, 0, 1).Local()
-	nextMidnight := nextDay.Truncate(24 * time.Hour)
-	// initialise value for each date between now and first join
-	for d := earliestMidnight; !d.After(nextMidnight); d = d.AddDate(0, 0, 1) {
-		dateString := d.Local().Format(DATE_FORMAT)
-		data = append(data, responsemodels.SingleDailyChartItem{
-			Date:  dateString,
-			Value: 0,
-		})
-	}
-
-	return data
 }
