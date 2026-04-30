@@ -9,6 +9,34 @@ import (
 	"context"
 )
 
+const findFirstJoinByUser = `-- name: FindFirstJoinByUser :one
+SELECT
+  time, user, level, x, y, z, action
+FROM
+  sessions
+WHERE
+  user = ?
+ORDER BY
+  time
+ASC
+LIMIT 1
+`
+
+func (q *Queries) FindFirstJoinByUser(ctx context.Context, user int32) (Session, error) {
+	row := q.db.QueryRowContext(ctx, findFirstJoinByUser, user)
+	var i Session
+	err := row.Scan(
+		&i.Time,
+		&i.User,
+		&i.Level,
+		&i.X,
+		&i.Y,
+		&i.Z,
+		&i.Action,
+	)
+	return i, err
+}
+
 const findGriefLoggerUserByUuid = `-- name: FindGriefLoggerUserByUuid :one
 SELECT
   id, name, uuid
