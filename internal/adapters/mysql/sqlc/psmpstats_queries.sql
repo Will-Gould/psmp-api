@@ -124,3 +124,13 @@ FROM
   psmpstats_diamonds_mined
 WHERE
   player_id = ?;
+
+-- name: GroupCountMobKillsByPlayer :many
+SELECT
+  mob, COUNT(*) AS total_killed
+FROM
+  psmpstats_mob_kills
+WHERE
+  player_id = ?
+GROUP BY
+  mob;

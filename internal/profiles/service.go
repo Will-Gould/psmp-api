@@ -20,6 +20,7 @@ type Service interface {
 	GroupCountBlocksByUser(ctx context.Context, id int32, action int32, banned []int32) ([]repo.GroupCountBlocksPlacedByUserRow, error)
 	ListBlocksByUser(ctx context.Context, id int32, action int32, banned []int32) ([]repo.Block, error)
 	FindFirstJoinByUser(ctx context.Context, id int32) (repo.Session, error)
+	GroupCountMobKillsByPlayer(ctx context.Context, id int32) ([]repo.GroupCountMobKillsByPlayerRow, error)
 }
 
 type svc struct {
@@ -105,4 +106,8 @@ func (s *svc) ListBlocksByUser(ctx context.Context, id int32, action int32, bann
 
 func (s *svc) FindFirstJoinByUser(ctx context.Context, id int32) (repo.Session, error) {
 	return s.repo.FindFirstJoinByUser(ctx, id)
+}
+
+func (s *svc) GroupCountMobKillsByPlayer(ctx context.Context, id int32) ([]repo.GroupCountMobKillsByPlayerRow, error) {
+	return s.repo.GroupCountMobKillsByPlayer(ctx, id)
 }

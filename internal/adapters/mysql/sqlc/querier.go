@@ -19,6 +19,7 @@ type Querier interface {
 	FindLuckpermsPlayerByUuid(ctx context.Context, uuid string) (LuckpermsPlayer, error)
 	FindPsmpstatsPlayerByUuid(ctx context.Context, uuid string) (PsmpstatsPlayer, error)
 	GroupCountBlocksPlacedByUser(ctx context.Context, user int32) ([]GroupCountBlocksPlacedByUserRow, error)
+	GroupCountMobKillsByPlayer(ctx context.Context, playerID int32) ([]GroupCountMobKillsByPlayerRow, error)
 	ListAdvancements(ctx context.Context) ([]PsmpstatsAdvancement, error)
 	ListAdvancementsById(ctx context.Context, playerID int32) ([]ListAdvancementsByIdRow, error)
 	ListBlocksBrokenByUser(ctx context.Context, user int32) ([]Block, error)
