@@ -120,6 +120,45 @@ func (q *Queries) FindPsmpstatsPlayerByUuid(ctx context.Context, uuid string) (P
 	return i, err
 }
 
+const groupCountMobKillsByPlayer = `-- name: GroupCountMobKillsByPlayer :many
+SELECT
+  mob, COUNT(*) AS total_killed
+FROM
+  psmpstats_mob_kills
+WHERE
+  player_id = ?
+GROUP BY
+  mob
+`
+
+type GroupCountMobKillsByPlayerRow struct {
+	Mob         int32 `json:"mob"`
+	TotalKilled int64 `json:"total_killed"`
+}
+
+func (q *Queries) GroupCountMobKillsByPlayer(ctx context.Context, playerID int32) ([]GroupCountMobKillsByPlayerRow, error) {
+	rows, err := q.db.QueryContext(ctx, groupCountMobKillsByPlayer, playerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GroupCountMobKillsByPlayerRow
+	for rows.Next() {
+		var i GroupCountMobKillsByPlayerRow
+		if err := rows.Scan(&i.Mob, &i.TotalKilled); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listAdvancements = `-- name: ListAdvancements :many
 SELECT
   id, name

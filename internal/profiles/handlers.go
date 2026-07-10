@@ -176,9 +176,51 @@ func (ph *profileHandler) GetDeathsChart(w http.ResponseWriter, r *http.Request)
 	json.Write(w, http.StatusOK, chart)
 }
 
+func (ph *profileHandler) GetMostKilledMob(w http.ResponseWriter, r *http.Request) {
+	uuid := chi.URLParam(r, "uuid")
+
+	psmpStatsPlayer, err := ph.service.FindPsmpstatsPlayerByUuid(r.Context(), uuid)
+	if err != nil {
+		json.Write(w, http.StatusNotFound, nil)
+		return
+	}
+
+	groupedMobKills, err := ph.service.GroupCountMobKillsByPlayer(r.Context(), psmpStatsPlayer.ID)
+	if err != nil {
+		json.Write(w, http.StatusNotFound, nil)
+	}
+
+	sort.Slice(groupedMobKills, func(i, j int) bool {
+		if groupedMobKills[i].TotalKilled > groupedMobKills[j].TotalKilled {
+			return true
+		}
+		return false
+	})
+
+	name := ph.findMobName(groupedMobKills[0].Mob)
+	mob := struct {
+		Name   string
+		Killed int64
+	}{
+		Name:   name,
+		Killed: groupedMobKills[0].TotalKilled,
+	}
+
+	json.Write(w, http.StatusOK, mob)
+}
+
 func (ph *profileHandler) findMaterialName(id int32) string {
 	for _, m := range ph.dataStore.MappingData.Materials {
 		if id == m.ID {
+			return m.Name
+		}
+	}
+	return ""
+}
+
+func (ph *profileHandler) findMobName(id int32) string {
+	for _, m := range ph.dataStore.MappingData.MobMapping {
+		if id == int32(m.ID) {
 			return m.Name
 		}
 	}
