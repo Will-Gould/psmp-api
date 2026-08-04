@@ -8,18 +8,21 @@ import (
 
 type Service interface {
 	FindGriefLoggerUser(ctx context.Context, uuid string) (repo.User, error)
-	ListBlocksBrokenByUser(ctx context.Context, id int32) ([]repo.Block, error)
-	ListBlocksPlacedByUser(ctx context.Context, id int32) ([]repo.Block, error)
-	ListSessionDataByUser(ctx context.Context, id int32) ([]repo.Session, error)
+	LedgerListBlocksByUser(ctx context.Context, actions map[string]int32, id int32, action int32, banned []int32) ([]repo.Action, error)
+	GriefLoggerListBlocksByUser(ctx context.Context, id int32, action int32, banned []int32) ([]repo.Block, error)
+	ListGriefLoggerSessions(ctx context.Context, id int32) ([]repo.Session, error)
+	ListPsmpstatsSessions(ctx context.Context, id int32) ([]repo.PsmpstatsSession, error)
 	ListDeathsByPlayer(ctx context.Context, id int32) ([]repo.PsmpstatsDeath, error)
 	CountSpecificMobKillsByPlayer(ctx context.Context, name string, id int32) (int64, error)
+	FindLedgerPlayer(ctx context.Context, uuid []byte) (repo.Player, error)
 	FindPsmpstatsPlayerByUuid(ctx context.Context, uuid string) (repo.PsmpstatsPlayer, error)
 	FindLuckpermsPlayer(ctx context.Context, uuid string) (repo.LuckpermsPlayer, error)
 	ListAdvancementsByPlayer(ctx context.Context, id int32) ([]repo.PsmpstatsAdvancement, error)
 	ListMobKillsByPlayer(ctx context.Context, id int32) ([]repo.PsmpstatsMobKill, error)
-	GroupCountBlocksByUser(ctx context.Context, id int32, action int32, banned []int32) ([]repo.GroupCountBlocksPlacedByUserRow, error)
-	ListBlocksByUser(ctx context.Context, id int32, action int32, banned []int32) ([]repo.Block, error)
-	FindFirstJoinByUser(ctx context.Context, id int32) (repo.Session, error)
+	GriefLoggerGroupCountBlocksByUser(ctx context.Context, id int32, action int32, banned []int32) ([]repo.GroupCountBlocksPlacedByUserRow, error)
+	LedgerGroupCountBlocksByUser(ctx context.Context, actions map[string]int32, id int32, action int32, banned []int32) ([]repo.GroupCountBlocksPlacedByUserRow, error)
+	FindGriefLoggerFirstJoin(ctx context.Context, id int32) (repo.Session, error)
+	FindPsmpstatsFirstJoin(ctx context.Context, id int32) (repo.PsmpstatsSession, error)
 	GroupCountMobKillsByPlayer(ctx context.Context, id int32) ([]repo.GroupCountMobKillsByPlayerRow, error)
 }
 
@@ -27,7 +30,7 @@ type svc struct {
 	repo repo.Querier
 }
 
-func NewService(repo repo.Querier) Service {
+func NewService(repo repo.Querier, gameLogger string) Service {
 	return &svc{repo: repo}
 }
 
@@ -42,6 +45,10 @@ func (s *svc) CountSpecificMobKillsByPlayer(ctx context.Context, name string, id
 // FindGriefLoggerUser implements [Service].
 func (s *svc) FindGriefLoggerUser(ctx context.Context, uuid string) (repo.User, error) {
 	return s.repo.FindGriefLoggerUserByUuid(ctx, uuid)
+}
+
+func (s *svc) FindLedgerPlayer(ctx context.Context, uuid []byte) (repo.Player, error) {
+	return s.repo.FindLedgerPlayerByUuid(ctx, uuid)
 }
 
 // FindLuckpermsPlayer implements [Service].
@@ -71,16 +78,6 @@ func (s *svc) ListAdvancementsByPlayer(ctx context.Context, id int32) ([]repo.Ps
 	return advancements, nil
 }
 
-// ListBlocksBrokenByUser implements [Service].
-func (s *svc) ListBlocksBrokenByUser(ctx context.Context, id int32) ([]repo.Block, error) {
-	return s.repo.ListBlocksBrokenByUser(ctx, id)
-}
-
-// ListBlocksPlacedByUser implements [Service].
-func (s *svc) ListBlocksPlacedByUser(ctx context.Context, id int32) ([]repo.Block, error) {
-	return s.repo.ListBlocksPlacedByUser(ctx, id)
-}
-
 // ListDeathsByPlayer implements [Service].
 func (s *svc) ListDeathsByPlayer(ctx context.Context, id int32) ([]repo.PsmpstatsDeath, error) {
 	return s.repo.ListDeathsById(ctx, id)
@@ -92,20 +89,36 @@ func (s *svc) ListMobKillsByPlayer(ctx context.Context, id int32) ([]repo.Psmpst
 }
 
 // ListSessionDataByUser implements [Service].
-func (s *svc) ListSessionDataByUser(ctx context.Context, id int32) ([]repo.Session, error) {
-	return s.repo.ListSessionDataByUser(ctx, id)
+func (s *svc) ListGriefLoggerSessions(ctx context.Context, id int32) ([]repo.Session, error) {
+	return s.repo.ListGriefLoggerSessionsByUser(ctx, id)
 }
 
-func (s *svc) GroupCountBlocksByUser(ctx context.Context, id int32, action int32, banned []int32) ([]repo.GroupCountBlocksPlacedByUserRow, error) {
-	return s.repo.GroupCountBlocksByUser(ctx, id, action, banned)
+func (s *svc) ListPsmpstatsSessions(ctx context.Context, id int32) ([]repo.PsmpstatsSession, error) {
+	return s.repo.ListPsmpstatsSessionsById(ctx, id)
 }
 
-func (s *svc) ListBlocksByUser(ctx context.Context, id int32, action int32, banned []int32) ([]repo.Block, error) {
-	return s.repo.ListBlocksByUser(ctx, id, action, banned)
+func (s *svc) GriefLoggerGroupCountBlocksByUser(ctx context.Context, id int32, action int32, banned []int32) ([]repo.GroupCountBlocksPlacedByUserRow, error) {
+	return s.repo.GriefLoggerGroupCountBlocksByUser(ctx, id, action, banned)
 }
 
-func (s *svc) FindFirstJoinByUser(ctx context.Context, id int32) (repo.Session, error) {
-	return s.repo.FindFirstJoinByUser(ctx, id)
+func (s *svc) LedgerGroupCountBlocksByUser(ctx context.Context, actions map[string]int32, id int32, action int32, banned []int32) ([]repo.GroupCountBlocksPlacedByUserRow, error) {
+	return s.repo.LedgerGroupCountBlocksByUser(ctx, actions, id, action, banned)
+}
+
+func (s *svc) GriefLoggerListBlocksByUser(ctx context.Context, id int32, action int32, banned []int32) ([]repo.Block, error) {
+	return s.repo.GriefLoggerListBlocksByUser(ctx, id, action, banned)
+}
+
+func (s *svc) LedgerListBlocksByUser(ctx context.Context, actions map[string]int32, id int32, action int32, banned []int32) ([]repo.Action, error) {
+	return s.repo.LedgerListBlocksByUser(ctx, actions, id, action, banned)
+}
+
+func (s *svc) FindGriefLoggerFirstJoin(ctx context.Context, id int32) (repo.Session, error) {
+	return s.repo.FindGriefLoggerFirstJoinByUser(ctx, id)
+}
+
+func (s *svc) FindPsmpstatsFirstJoin(ctx context.Context, id int32) (repo.PsmpstatsSession, error) {
+	return s.repo.FindPsmpstatsFirstJoinById(ctx, id)
 }
 
 func (s *svc) GroupCountMobKillsByPlayer(ctx context.Context, id int32) ([]repo.GroupCountMobKillsByPlayerRow, error) {

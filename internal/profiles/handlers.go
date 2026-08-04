@@ -1,29 +1,37 @@
 package profiles
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"slices"
 	"sort"
+	"time"
 
+	Uuid "github.com/google/uuid"
+
+	repo "github.com/Will-Gould/psmp-api/internal/adapters/mysql/sqlc"
 	"github.com/Will-Gould/psmp-api/internal/cache"
 	"github.com/Will-Gould/psmp-api/internal/json"
 	"github.com/Will-Gould/psmp-api/internal/mapping"
 	responsemodels "github.com/Will-Gould/psmp-api/internal/response_models"
+	"github.com/Will-Gould/psmp-api/internal/translation"
 	"github.com/go-chi/chi"
 )
 
 const DATE_FORMAT = "2006-01-02"
 
 type profileHandler struct {
-	service   Service
-	dataStore *cache.DataStore
+	service    Service
+	dataStore  *cache.DataStore
+	gameLogger string
 }
 
-func NewHandler(service Service, ds *cache.DataStore) *profileHandler {
+func NewHandler(service Service, ds *cache.DataStore, gameLogger string) *profileHandler {
 	return &profileHandler{
-		service:   service,
-		dataStore: ds,
+		service:    service,
+		dataStore:  ds,
+		gameLogger: gameLogger,
 	}
 }
 
@@ -36,13 +44,14 @@ func (ph *profileHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 		ph.dataStore.Mu.RUnlock()
 		return
 	}
+	//TODO is this lock in correct place?
 	ph.dataStore.Mu.RUnlock()
 	// model player profile from data in cache
 	profile := responsemodels.PlayerProfile{
-		Player:       player,
-		CombatRank:   ph.dataStore.CombatLeaderboard[uuid].Rank,
-		CraftingRank: ph.dataStore.CraftingLeaderboard[uuid].Rank,
-		StoryRank:    ph.dataStore.StoryLeaderboard[uuid].Rank,
+		Player:        player,
+		CombatRank:    ph.dataStore.CombatLeaderboard[uuid].Rank,
+		CraftingRank:  ph.dataStore.CraftingLeaderboard[uuid].Rank,
+		AdventureRank: ph.dataStore.AdventureLeaderboard[uuid].Rank,
 		StatLeaderboardPlayer: responsemodels.StatLeaderboardPlayer{
 			Uuid:              uuid,
 			BlocksPlacedRank:  ph.dataStore.StatLeaderboards.BlocksPlacedLeaderboard[uuid].Rank,
@@ -63,12 +72,13 @@ func (ph *profileHandler) GetMobKillChart(w http.ResponseWriter, r *http.Request
 	uuid := chi.URLParam(r, "uuid")
 
 	psmpStatsPlayer, err := ph.service.FindPsmpstatsPlayerByUuid(r.Context(), uuid)
-	glUser, err := ph.service.FindGriefLoggerUser(r.Context(), uuid)
-	firstJoin, err := ph.service.FindFirstJoinByUser(r.Context(), glUser.ID)
+	loggerUser, err := ph.findLoggerUser(r.Context(), uuid)
 	if err != nil {
 		json.Write(w, http.StatusNotFound, nil)
 		return
 	}
+
+	firstJoin := ph.getFirstJoin(r.Context(), loggerUser.ID, psmpStatsPlayer.ID)
 
 	mobKills, err := ph.service.ListMobKillsByPlayer(r.Context(), psmpStatsPlayer.ID)
 	if err != nil {
@@ -85,17 +95,34 @@ func (ph *profileHandler) GetBlocksBrokenPieChart(w http.ResponseWriter, r *http
 	uuid := chi.URLParam(r, "uuid")
 	data := []responsemodels.BlockChartItem{}
 
-	glUser, err := ph.service.FindGriefLoggerUser(r.Context(), uuid)
+	loggerUser, err := ph.findLoggerUser(r.Context(), uuid)
 	if err != nil {
 		json.Write(w, http.StatusNotFound, nil)
 		return
 	}
 
-	blocksBroken, err := ph.service.GroupCountBlocksByUser(r.Context(), glUser.ID, mapping.BLOCK_BROKEN_ACTION, ph.dataStore.MappingData.BannedBrokenMaterials)
+	var blocksBroken []repo.GroupCountBlocksPlacedByUserRow
+	switch ph.gameLogger {
+	case "grieflogger":
+		glBlocksBroken, err := ph.service.GriefLoggerGroupCountBlocksByUser(r.Context(), loggerUser.ID, ph.dataStore.MappingData.Actions["block-break"], ph.dataStore.MappingData.BannedBrokenObjects)
+		if err != nil {
+			json.Write(w, http.StatusInternalServerError, nil)
+			return
+		}
+		blocksBroken = glBlocksBroken
+	default:
+		ledgerBlocksBroken, err := ph.service.LedgerGroupCountBlocksByUser(r.Context(), ph.dataStore.MappingData.Actions, loggerUser.ID, ph.dataStore.MappingData.Actions["block-break"], ph.dataStore.MappingData.BannedBrokenObjects)
+		if err != nil {
+			json.Write(w, http.StatusInternalServerError, nil)
+			slog.Log(r.Context(), slog.LevelError, err.Error())
+			return
+		}
+		blocksBroken = ledgerBlocksBroken
+	}
 
 	// transform into materials
 	for _, b := range blocksBroken {
-		name := ph.findMaterialName(b.Type)
+		name := ph.findObjectName(b.Type)
 		data = append(data, responsemodels.BlockChartItem{
 			Block: name,
 			Value: b.TotalPlaced,
@@ -131,25 +158,37 @@ func (ph *profileHandler) GetBlocksBrokenPieChart(w http.ResponseWriter, r *http
 func (ph *profileHandler) GetTotalBlocksChart(w http.ResponseWriter, r *http.Request) {
 	uuid := chi.URLParam(r, "uuid")
 
-	glUser, err := ph.service.FindGriefLoggerUser(r.Context(), uuid)
+	loggerUser, err := ph.findLoggerUser(r.Context(), uuid)
 	if err != nil {
 		json.Write(w, http.StatusNotFound, nil)
 		return
 	}
 
-	blocksBroken, err := ph.service.ListBlocksByUser(r.Context(), glUser.ID, mapping.BLOCK_BROKEN_ACTION, ph.dataStore.MappingData.BannedBrokenMaterials)
-	if err != nil {
-		json.Write(w, http.StatusInternalServerError, nil)
-	}
-	blocksPlaced, err := ph.service.ListBlocksByUser(r.Context(), glUser.ID, mapping.BLOCK_PLACED_ACTION, ph.dataStore.MappingData.BannedPlacedMaterials)
-	if err != nil {
-		json.Write(w, http.StatusInternalServerError, nil)
+	var blocksBroken []translation.Block
+	var blocksPlaced []translation.Block
+	switch ph.gameLogger {
+	case "grieflogger":
+		glBlocksBroken, err := ph.service.GriefLoggerListBlocksByUser(r.Context(), loggerUser.ID, mapping.BLOCK_BROKEN_ACTION, ph.dataStore.MappingData.BannedBrokenObjects)
+		glBlocksPlaced, err := ph.service.GriefLoggerListBlocksByUser(r.Context(), loggerUser.ID, mapping.BLOCK_PLACED_ACTION, ph.dataStore.MappingData.BannedPlacedObjects)
+		if err != nil {
+			json.Write(w, http.StatusInternalServerError, nil)
+		}
+		blocksBroken = translation.GriefLoggerTranslateToBlocks(glBlocksBroken)
+		blocksPlaced = translation.GriefLoggerTranslateToBlocks(glBlocksPlaced)
+	default:
+		ledgerBlocksBroken, err := ph.service.LedgerListBlocksByUser(r.Context(), ph.dataStore.MappingData.Actions, loggerUser.ID, ph.dataStore.MappingData.Actions["block-break"], ph.dataStore.MappingData.BannedBrokenObjects)
+		ledgerBlocksPlaced, err := ph.service.LedgerListBlocksByUser(r.Context(), ph.dataStore.MappingData.Actions, loggerUser.ID, ph.dataStore.MappingData.Actions["block-place"], ph.dataStore.MappingData.BannedPlacedObjects)
+		if err != nil {
+			json.Write(w, http.StatusInternalServerError, nil)
+		}
+		blocksBroken = translation.LedgerTranslateToBlocks(ledgerBlocksBroken)
+		blocksPlaced = translation.LedgerTranslateToBlocks(ledgerBlocksPlaced)
 	}
 
 	// combine block action into one slice & sort
 	blocks := append(blocksBroken, blocksPlaced...)
 
-	chart := GetTotalBlocksChartData(blocks)
+	chart := GetTotalBlocksChartData(blocks, ph.dataStore.MappingData.Actions)
 
 	json.Write(w, http.StatusOK, chart)
 }
@@ -158,12 +197,13 @@ func (ph *profileHandler) GetDeathsChart(w http.ResponseWriter, r *http.Request)
 	uuid := chi.URLParam(r, "uuid")
 
 	psmpStatsPlayer, err := ph.service.FindPsmpstatsPlayerByUuid(r.Context(), uuid)
-	glUser, err := ph.service.FindGriefLoggerUser(r.Context(), uuid)
-	firstJoin, err := ph.service.FindFirstJoinByUser(r.Context(), glUser.ID)
+	loggerUser, err := ph.findLoggerUser(r.Context(), uuid)
 	if err != nil {
 		json.Write(w, http.StatusNotFound, nil)
 		return
 	}
+
+	firstJoin := ph.getFirstJoin(r.Context(), loggerUser.ID, psmpStatsPlayer.ID)
 
 	deaths, err := ph.service.ListDeathsByPlayer(r.Context(), psmpStatsPlayer.ID)
 	if err != nil {
@@ -188,6 +228,11 @@ func (ph *profileHandler) GetMostKilledMob(w http.ResponseWriter, r *http.Reques
 	groupedMobKills, err := ph.service.GroupCountMobKillsByPlayer(r.Context(), psmpStatsPlayer.ID)
 	if err != nil {
 		json.Write(w, http.StatusNotFound, nil)
+		return
+	}
+	if len(groupedMobKills) < 1 {
+		json.Write(w, http.StatusOK, nil)
+		return
 	}
 
 	sort.Slice(groupedMobKills, func(i, j int) bool {
@@ -209,10 +254,10 @@ func (ph *profileHandler) GetMostKilledMob(w http.ResponseWriter, r *http.Reques
 	json.Write(w, http.StatusOK, mob)
 }
 
-func (ph *profileHandler) findMaterialName(id int32) string {
-	for _, m := range ph.dataStore.MappingData.Materials {
-		if id == m.ID {
-			return m.Name
+func (ph *profileHandler) findObjectName(id int32) string {
+	for _, o := range ph.dataStore.MappingData.Objects {
+		if id == o.ID {
+			return o.Name
 		}
 	}
 	return ""
@@ -225,4 +270,64 @@ func (ph *profileHandler) findMobName(id int32) string {
 		}
 	}
 	return ""
+}
+
+func (ph *profileHandler) findLoggerUser(ctx context.Context, uuid string) (translation.LoggerUser, error) {
+	loggerUser := translation.LoggerUser{}
+	switch ph.gameLogger {
+	case "grieflogger":
+		glUser, err := ph.service.FindGriefLoggerUser(ctx, uuid)
+		if err != nil {
+			slog.Log(ctx, slog.LevelDebug, "Unable to find Grieflogger user")
+			return loggerUser, err
+		}
+		loggerUser.ID = glUser.ID
+		loggerUser.Name = glUser.Name
+		loggerUser.Uuid = glUser.Uuid
+	default:
+		parsedUuid, err := Uuid.Parse(uuid)
+		if err != nil {
+			slog.Log(ctx, slog.LevelDebug, "Error parsing uuid")
+			return loggerUser, err
+		}
+		ledgerUser, err := ph.service.FindLedgerPlayer(ctx, parsedUuid[:])
+		if err != nil {
+			slog.Log(ctx, slog.LevelDebug, "Unable to find Ledger player")
+			return loggerUser, err
+		}
+		loggerUser.ID = ledgerUser.ID
+		loggerUser.Name = ledgerUser.PlayerName
+		loggerUser.Uuid = uuid
+	}
+
+	return loggerUser, nil
+}
+
+func (ph *profileHandler) getFirstJoin(ctx context.Context, loggerId int32, psmpstatsId int32) translation.Session {
+	var firstJoin translation.Session
+	switch ph.gameLogger {
+	case "grieflogger":
+		glFirstJoin, err := ph.service.FindGriefLoggerFirstJoin(ctx, loggerId)
+		if err != nil {
+			slog.Log(ctx, slog.LevelError, "Error finding Grief Logger first join")
+		} else {
+			firstJoin = translation.Session{
+				ID:     glFirstJoin.User,
+				Time:   glFirstJoin.Time,
+				Action: glFirstJoin.Action,
+			}
+		}
+	default:
+		pFirstJoin, err := ph.service.FindPsmpstatsFirstJoin(ctx, psmpstatsId)
+		if err != nil {
+			slog.Log(ctx, slog.LevelError, "Error finding PSMP Stats first join")
+		} else {
+			firstJoin = translation.Session{
+				ID:     pFirstJoin.PlayerID,
+				Time:   time.Unix(int64(pFirstJoin.Time), 0).UnixMilli(),
+				Action: pFirstJoin.Action,
+			}
+		}
+	}
+	return firstJoin
 }

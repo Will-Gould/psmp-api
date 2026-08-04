@@ -1,14 +1,14 @@
 package responsemodels
 
 type ServerPlayer struct {
-	Uuid             string
-	Name             string
-	PrimaryGroup     string
-	ServerRank       int64
-	CraftingOverview CraftingOverview
-	CombatOverview   CombatOverview
-	StoryOverview    StoryOverview
-	Score            float64
+	Uuid              string
+	Name              string
+	PrimaryGroup      string
+	ServerRank        int64
+	CraftingOverview  CraftingOverview
+	CombatOverview    CombatOverview
+	AdventureOverview AdventureOverview
+	Score             float64
 }
 
 type CraftingOverview struct {
@@ -33,8 +33,10 @@ type CombatOverview struct {
 	WithersKilled        int64
 }
 
-type StoryOverview struct {
-	StoryScore float64
+type AdventureOverview struct {
+	AdventureScore float64
+	Advancements   int32
+	FishCaught     int64
 }
 
 type LeaderboardPlayer struct {
@@ -63,11 +65,13 @@ type CraftingLeaderboardPlayer struct {
 	DiamondsMined int64
 }
 
-type StoryLeaderboardPlayer struct {
+type AdventureLeaderboardPlayer struct {
 	Uuid         string
 	Name         string
 	PrimaryGroup string
 	Rank         int64
+	Advancements int64
+	FishCaught   int64
 }
 
 type StatLeaderboardPlayer struct {

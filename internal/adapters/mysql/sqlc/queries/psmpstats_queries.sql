@@ -134,3 +134,31 @@ WHERE
   player_id = ?
 GROUP BY
   mob;
+
+-- name: ListPsmpstatsSessionsById :many
+SELECT
+  *
+FROM
+  psmpstats_sessions
+WHERE
+  player_id = ?;
+
+-- name: FindPsmpstatsFirstJoinById :one
+SELECT
+  *
+FROM
+  psmpstats_sessions
+WHERE
+  player_id = ?
+ORDER BY
+  time
+ASC
+LIMIT 1;
+
+-- name: CountFishCaughtByPlayer :one
+SELECT
+  count(*)
+FROM
+  psmpstats_fish
+WHERE
+  player_id = ?;

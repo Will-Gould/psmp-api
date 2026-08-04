@@ -8,21 +8,25 @@ import (
 
 type Service interface {
 	FindGriefLoggerUser(ctx context.Context, uuid string) (repo.User, error)
-	CountBlocksByUser(ctx context.Context, id int32, action int32, banned []int32) (int64, error)
-	ListBlocksBrokenByUser(ctx context.Context, id int32) ([]repo.Block, error)
-	ListBlocksPlacedByUser(ctx context.Context, id int32) ([]repo.Block, error)
-	ListSessionDataByUser(ctx context.Context, id int32) ([]repo.Session, error)
+	FindLedgerPlayer(ctx context.Context, uuid []byte) (repo.Player, error)
+	GriefLoggerCountBlocksByUser(ctx context.Context, id int32, action int32, banned []int32) (int64, error)
+	LedgerCountBlocksByUser(ctx context.Context, actions map[string]int32, id int32, action int32, banned []int32) (int64, error)
+	LedgerListBlocksByUser(ctx context.Context, actions map[string]int32, user int32, action int32, banned []int32) ([]repo.Action, error)
+	GriefLoggerListBlocksByUser(ctx context.Context, user int32, action int32, banned []int32) ([]repo.Block, error)
+	ListGriefLoggerSessions(ctx context.Context, id int32) ([]repo.Session, error)
+	ListPsmpstatsSessions(ctx context.Context, id int32) ([]repo.PsmpstatsSession, error)
 	ListDeathsByPlayer(ctx context.Context, id int32) ([]repo.PsmpstatsDeath, error)
 	CountDeathsByPlayer(ctx context.Context, id int32) (int64, error)
 	CountPvpKillsByPlayer(ctx context.Context, id int32) (int64, error)
 	CountMobKillsByPlayer(ctx context.Context, id int32) (int64, error)
 	CountSpecificMobKillsByPlayer(ctx context.Context, name string, id int32) (int64, error)
-	FindPsmpstatsPlayerByUuid(ctx context.Context, uuid string) (repo.PsmpstatsPlayer, error)
+	FindPsmpstatsPlayer(ctx context.Context, uuid string) (repo.PsmpstatsPlayer, error)
 	FindLuckpermsPlayer(ctx context.Context, uuid string) (repo.LuckpermsPlayer, error)
 	ListAdvancementsByPlayer(ctx context.Context, id int32) ([]repo.PsmpstatsAdvancement, error)
 	ListLuckpermsPlayers(ctx context.Context) ([]repo.LuckpermsPlayer, error)
 	ListMobKillsByPlayer(ctx context.Context, id int32) ([]repo.PsmpstatsMobKill, error)
 	CountDiamondsMinedByPlayer(ctx context.Context, id int32) (int64, error)
+	CountFishCaughtByPlayer(ctx context.Context, id int32) (int64, error)
 }
 
 type svc struct {
@@ -37,20 +41,32 @@ func (s svc) FindGriefLoggerUser(ctx context.Context, uuid string) (repo.User, e
 	return s.repo.FindGriefLoggerUserByUuid(ctx, uuid)
 }
 
-func (s svc) ListBlocksBrokenByUser(ctx context.Context, id int32) ([]repo.Block, error) {
-	return s.repo.ListBlocksBrokenByUser(ctx, id)
+func (s svc) FindLedgerPlayer(ctx context.Context, uuid []byte) (repo.Player, error) {
+	return s.repo.FindLedgerPlayerByUuid(ctx, uuid)
 }
 
-func (s svc) ListBlocksPlacedByUser(ctx context.Context, id int32) ([]repo.Block, error) {
-	return s.repo.ListBlocksPlacedByUser(ctx, id)
+func (s svc) GriefLoggerCountBlocksByUser(ctx context.Context, id int32, action int32, banned []int32) (int64, error) {
+	return s.repo.GriefLoggerCountBlocksByUser(ctx, id, action, banned)
 }
 
-func (s svc) CountBlocksByUser(ctx context.Context, id int32, action int32, banned []int32) (int64, error) {
-	return s.repo.CountBlocksByUser(ctx, id, action, banned)
+func (s svc) LedgerCountBlocksByUser(ctx context.Context, actions map[string]int32, id int32, action int32, banned []int32) (int64, error) {
+	return s.repo.LedgerCountBlocksByUser(ctx, actions, id, action, banned)
 }
 
-func (s svc) ListSessionDataByUser(ctx context.Context, id int32) ([]repo.Session, error) {
-	return s.repo.ListSessionDataByUser(ctx, id)
+func (s svc) LedgerListBlocksByUser(ctx context.Context, actions map[string]int32, user int32, action int32, banned []int32) ([]repo.Action, error) {
+	return s.repo.LedgerListBlocksByUser(ctx, actions, user, action, banned)
+}
+
+func (s svc) GriefLoggerListBlocksByUser(ctx context.Context, user int32, action int32, banned []int32) ([]repo.Block, error) {
+	return s.repo.GriefLoggerListBlocksByUser(ctx, user, action, banned)
+}
+
+func (s svc) ListGriefLoggerSessions(ctx context.Context, id int32) ([]repo.Session, error) {
+	return s.repo.ListGriefLoggerSessionsByUser(ctx, id)
+}
+
+func (s svc) ListPsmpstatsSessions(ctx context.Context, id int32) ([]repo.PsmpstatsSession, error) {
+	return s.repo.ListPsmpstatsSessionsById(ctx, id)
 }
 
 func (s svc) ListDeathsByPlayer(ctx context.Context, id int32) ([]repo.PsmpstatsDeath, error) {
@@ -77,7 +93,7 @@ func (s svc) CountSpecificMobKillsByPlayer(ctx context.Context, name string, id 
 		})
 }
 
-func (s svc) FindPsmpstatsPlayerByUuid(ctx context.Context, uuid string) (repo.PsmpstatsPlayer, error) {
+func (s svc) FindPsmpstatsPlayer(ctx context.Context, uuid string) (repo.PsmpstatsPlayer, error) {
 	return s.repo.FindPsmpstatsPlayerByUuid(ctx, uuid)
 }
 
@@ -111,4 +127,8 @@ func (s svc) ListMobKillsByPlayer(ctx context.Context, id int32) ([]repo.Psmpsta
 
 func (s svc) CountDiamondsMinedByPlayer(ctx context.Context, id int32) (int64, error) {
 	return s.repo.CountDiamondsMinedById(ctx, id)
+}
+
+func (s svc) CountFishCaughtByPlayer(ctx context.Context, id int32) (int64, error) {
+	return s.repo.CountFishCaughtByPlayer(ctx, id)
 }

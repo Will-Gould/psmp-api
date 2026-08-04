@@ -1,10 +1,14 @@
 version: "2"
 sql:
-  - engine: "mysql"
+  - name: ""
+    engine: "mysql"
     queries: 
-      - "./internal/adapters/mysql/sqlc/queries.sql"
-      - "./internal/adapters/mysql/sqlc/psmpstats_queries.sql"
-    schema: "./internal/adapters/mysql/migrations"
+      - "./internal/adapters/mysql/sqlc/queries/"
+    schema: 
+      - "./internal/adapters/mysql/migrations/grieflogger"
+      - "./internal/adapters/mysql/migrations/ledger"
+      - "./internal/adapters/mysql/migrations/luckperms"
+      - "./internal/adapters/mysql/migrations/psmpstats"
     gen:
       go:
         package: "repo"

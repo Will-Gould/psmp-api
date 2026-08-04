@@ -11,57 +11,82 @@ import (
 )
 
 type mappingHandler struct {
-	service   Service
-	dataStore *cache.DataStore
+	service    Service
+	dataStore  *cache.DataStore
+	gameLogger string
 }
 
-func NewHandler(service Service, ds *cache.DataStore) *mappingHandler {
+func NewHandler(service Service, ds *cache.DataStore, gameLogger string) *mappingHandler {
 	return &mappingHandler{
-		service:   service,
-		dataStore: ds,
+		service:    service,
+		dataStore:  ds,
+		gameLogger: gameLogger,
 	}
 }
 
 func (mh mappingHandler) LoadMappingData(ctx context.Context) {
-	materials := mh.GetMaterials(ctx)
-	bannedPlacedMaterials, bannedBrokenMaterials := mh.GetBannedMaterials(ctx, materials)
+	objects := mh.GetObjects(ctx)
+	bannedPlacedObjects, bannedBrokenObjects := mh.GetBannedObjects(ctx, objects)
+	actionIdentifiers := mh.GetActionIdentifiers(ctx)
 	causeMapping := mh.GetDeathCauseMapping(ctx)
 	mobMapping := mh.GetMobMapping(ctx)
 	advancementMapping := mh.GetAdvancementMapping(ctx)
 
-	mh.dataStore.MappingData.Materials = materials
-	mh.dataStore.MappingData.BannedPlacedMaterials = bannedPlacedMaterials
-	mh.dataStore.MappingData.BannedBrokenMaterials = bannedBrokenMaterials
+	mh.dataStore.MappingData.Objects = objects
+	mh.dataStore.MappingData.BannedBrokenObjects = bannedBrokenObjects
+	mh.dataStore.MappingData.BannedPlacedObjects = bannedPlacedObjects
+	mh.dataStore.MappingData.Actions = actionIdentifiers
 	mh.dataStore.MappingData.CauseMapping = causeMapping
 	mh.dataStore.MappingData.MobMapping = mobMapping
 	mh.dataStore.MappingData.AdvancementMapping = advancementMapping
 }
 
-func (mh mappingHandler) GetMaterials(ctx context.Context) []repo.Material {
+func (mh mappingHandler) GetObjects(ctx context.Context) []cache.Object {
 	// get materials mapping
 	// slog.Log(ctx, slog.LevelInfo, "Punching trees...")
-	materials, err := mh.service.ListMaterials(ctx)
-	if err != nil {
-		log.Default()
-		log.Panic("Failed to initialise materials")
+
+	var objects []cache.Object
+	switch mh.gameLogger {
+	// GriefLogger
+	case "grieflogger":
+		materials, err := mh.service.ListGriefLoggerMaterials(ctx)
+		if err != nil {
+			log.Default()
+			log.Panic("Failed to initialise materials")
+		}
+		for _, m := range materials {
+			// for the case of grieflogger "minecraft:" will be prepended for consitency
+			objects = append(objects, cache.Object{ID: m.ID, Name: "minecraft:" + m.Name})
+		}
+	// Ledger
+	default:
+		ledgerObjects, err := mh.service.ListLedgerObjects(ctx)
+		if err != nil {
+			log.Default()
+			log.Panic("Failed to initialise materials")
+		}
+		for _, o := range ledgerObjects {
+			objects = append(objects, cache.Object{ID: o.ID, Name: o.Identifier})
+		}
 	}
 
-	return materials
+	return objects
 }
 
-func (mh mappingHandler) GetBannedMaterials(ctx context.Context, materials []repo.Material) ([]int32, []int32) {
-	bannedPlacedMaterials, bannedBrokenMaterials := []int32{}, []int32{}
+func (mh mappingHandler) GetBannedObjects(ctx context.Context, objects []cache.Object) ([]int32, []int32) {
+	bannedPlacedObjects, bannedBrokenObjects := []int32{}, []int32{}
 	// add banned material IDs
 	// slog.Log(ctx, slog.LevelInfo, "Brewing potions...")
-	for _, m := range materials {
-		if slices.Contains(BANNED_PLACED_MATERIALS, m.Name) {
-			bannedPlacedMaterials = append(bannedPlacedMaterials, m.ID)
+	for _, o := range objects {
+		if slices.Contains(BANNED_PLACED_MATERIALS, o.Name) {
+			bannedPlacedObjects = append(bannedPlacedObjects, o.ID)
 		}
-		if slices.Contains(BANNED_BROKEN_MATERIALS, m.Name) {
-			bannedBrokenMaterials = append(bannedBrokenMaterials, m.ID)
+		if slices.Contains(BANNED_BROKEN_MATERIALS, o.Name) {
+			bannedBrokenObjects = append(bannedBrokenObjects, o.ID)
 		}
 	}
-	return bannedPlacedMaterials, bannedBrokenMaterials
+
+	return bannedPlacedObjects, bannedBrokenObjects
 }
 
 func (mh mappingHandler) GetAdvancementMapping(ctx context.Context) []repo.PsmpstatsAdvancement {
@@ -95,4 +120,28 @@ func (mh mappingHandler) GetDeathCauseMapping(ctx context.Context) []repo.Psmpst
 		log.Panic()
 	}
 	return causeMap
+}
+
+func (mh mappingHandler) GetActionIdentifiers(ctx context.Context) map[string]int32 {
+
+	actions := make(map[string]int32)
+	switch mh.gameLogger {
+	case "grieflogger":
+		actions["block-break"] = 0
+		actions["block-place"] = 1
+		actions["player-join"] = 0
+		actions["player-leave"] = 1
+	default:
+		actionIdentifiers, err := mh.service.ListActionIdentifiers(ctx)
+		if err != nil {
+			slog.Log(ctx, slog.LevelError, "Failed to load Ledger action identifiers")
+			log.Panic()
+		}
+		for _, a := range actionIdentifiers {
+			//actions = append(actions, cache.Action{ID: a.ID, Name: a.ActionIdentifier})
+			actions[a.ActionIdentifier] = a.ID
+		}
+	}
+
+	return actions
 }

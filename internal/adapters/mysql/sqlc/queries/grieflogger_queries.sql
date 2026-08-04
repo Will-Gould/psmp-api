@@ -1,17 +1,3 @@
--- name: ListLuckpermsPlayers :many
-SELECT
-  *
-FROM
-  luckperms_players;
-
--- name: FindLuckpermsPlayerByUuid :one
-SELECT
-  *
-FROM
-  luckperms_players
-WHERE
-  uuid = ?;
-
 -- name: ListMaterials :many
 SELECT
   *
@@ -46,7 +32,7 @@ FROM
 WHERE
   uuid = ?;
 
--- name: ListSessionDataByUser :many
+-- name: ListGriefLoggerSessionsByUser :many
 SELECT
   *
 FROM
@@ -66,7 +52,7 @@ AND
 GROUP BY
   type;
 
--- name: FindFirstJoinByUser :one
+-- name: FindGriefLoggerFirstJoinByUser :one
 SELECT
   *
 FROM

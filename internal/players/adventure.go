@@ -10,15 +10,17 @@ import (
 
 var ONE_POINT_MILESTONES = []string{
 	"minecraft:story/follow_ender_eye",
-	"minecraft:nether/find_bastion",
+	"minecraft:story/enter_the_nether",
 	"minecraft:nether/find_fortress",
 	"minecraft:adventure/minecraft_trials_edition",
-	"minecraft:end/find_end_city",
+	"minecraft:story/mine_diamond",
+	"minecraft:story/enchant_item",
 }
 
 var TWO_POINT_MILESTONES = []string{
 	"minecraft:adventure/salvage_sherd",
 	"minecraft:nether/explore_nether",
+	"minecraft:end/find_end_city",
 }
 
 var THREE_POINT_MILESTONES = []string{
@@ -38,57 +40,67 @@ var FIVE_POINT_MILESTONES = []string{
 	"minecraft:nether/all_effects",
 }
 
-func (ph *playerHandler) getStoryOverview(ctx context.Context, psmpStatsId int32) (responsemodels.StoryOverview, error) {
+func (ph *playerHandler) getAdventureOverview(ctx context.Context, psmpStatsId int32) (responsemodels.AdventureOverview, error) {
 	advancements, err := ph.service.ListAdvancementsByPlayer(ctx, psmpStatsId)
 	if err != nil {
 		slog.Log(ctx, slog.LevelError, err.Error())
 	}
 
-	storyOverview := responsemodels.StoryOverview{
-		StoryScore: calculateStoryScore(advancements),
+	fishCaught, err := ph.service.CountFishCaughtByPlayer(ctx, psmpStatsId)
+	if err != nil {
+		slog.Log(ctx, slog.LevelError, "Error counting fish caught")
 	}
 
-	return storyOverview, nil
+	adventureOverview := responsemodels.AdventureOverview{
+		AdventureScore: calculateAdventureScore(advancements, fishCaught),
+		Advancements:   int32(len(advancements)),
+		FishCaught:     fishCaught,
+	}
+
+	return adventureOverview, nil
 }
 
-func calculateStoryScore(advancements []repo.PsmpstatsAdvancement) float64 {
-	var storyScore float64
+func calculateAdventureScore(advancements []repo.PsmpstatsAdvancement, fishCaught int64) float64 {
+	var adventureScore float64 = 0
+
+	// 1/100 fish caught
+	adventureScore += (float64(fishCaught) / 100)
 
 	for _, m := range ONE_POINT_MILESTONES {
 		for _, a := range advancements {
 			if a.Name == m {
-				storyScore += 1
+				adventureScore += 1
 			}
 		}
 	}
 	for _, m := range TWO_POINT_MILESTONES {
 		for _, a := range advancements {
 			if a.Name == m {
-				storyScore += 2
+				adventureScore += 2
 			}
 		}
 	}
 	for _, m := range THREE_POINT_MILESTONES {
 		for _, a := range advancements {
 			if a.Name == m {
-				storyScore += 3
+				adventureScore += 3
 			}
 		}
 	}
 	for _, m := range FOUR_POINT_MILESTONES {
 		for _, a := range advancements {
 			if a.Name == m {
-				storyScore += 4
+				adventureScore += 4
 			}
 		}
 	}
 	for _, m := range FIVE_POINT_MILESTONES {
 		for _, a := range advancements {
 			if a.Name == m {
-				storyScore += 5
+				adventureScore += 5
 			}
 		}
 	}
 
-	return storyScore
+	return adventureScore
 }
