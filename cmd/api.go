@@ -38,11 +38,11 @@ func (app application) mount() http.Handler {
 
 	// initialise cache
 	dataStore := cache.DataStore{
-		Players:             make(map[string]responsemodels.ServerPlayer),
-		MappingData:         cache.MappingData{},
-		CombatLeaderboard:   make(map[string]responsemodels.CombatLeaderboardPlayer),
-		CraftingLeaderboard: make(map[string]responsemodels.CraftingLeaderboardPlayer),
-		StoryLeaderboard:    make(map[string]responsemodels.StoryLeaderboardPlayer),
+		Players:              make(map[string]responsemodels.ServerPlayer),
+		MappingData:          cache.MappingData{},
+		CombatLeaderboard:    make(map[string]responsemodels.CombatLeaderboardPlayer),
+		CraftingLeaderboard:  make(map[string]responsemodels.CraftingLeaderboardPlayer),
+		AdventureLeaderboard: make(map[string]responsemodels.AdventureLeaderboardPlayer),
 		StatLeaderboards: cache.StatLeaderboards{
 			BlocksPlacedLeaderboard:  map[string]responsemodels.LeaderboardPlayer{},
 			BlocksBrokenLeaderboard:  map[string]responsemodels.LeaderboardPlayer{},
@@ -60,10 +60,10 @@ func (app application) mount() http.Handler {
 
 	// Start mapping service & handler
 	mappingService := mapping.NewService(repo)
-	mappingHandler := mapping.NewHandler(mappingService, &dataStore)
+	mappingHandler := mapping.NewHandler(mappingService, &dataStore, string(app.config.db.gameLogger))
 	// Start player service & handler
 	playerService := players.NewService(repo)
-	playerHandler := players.NewHandler(playerService, &dataStore)
+	playerHandler := players.NewHandler(playerService, &dataStore, string(app.config.db.gameLogger))
 
 	// Load data into cache
 	mappingHandler.LoadMappingData(context.Background())
@@ -82,22 +82,19 @@ func (app application) mount() http.Handler {
 	}()
 
 	// Start profile service & handler
-	profileService := profiles.NewService(repo)
-	profileHandler := profiles.NewHandler(profileService, &dataStore)
+	profileService := profiles.NewService(repo, string(app.config.db.gameLogger))
+	profileHandler := profiles.NewHandler(profileService, &dataStore, string(app.config.db.gameLogger))
 
 	// Map endpoints
 	// players
 	r.Get("/api/players/{uuid}", playerHandler.GetServerPlayer)
-	r.Get("/api/players/leaderboards/server", playerHandler.ListServerLeaderboard)
-	r.Get("/api/players/leaderboards/server/top-ten", playerHandler.ListServerTopTen)
-	r.Get("/api/players/leaderboards/combat", playerHandler.ListCombatLeaderboard)
-	r.Get("/api/players/leaderboards/combat/top-ten", playerHandler.ListCombatTopTen)
-	r.Get("/api/players/leaderboards/crafting", playerHandler.ListCraftingLeaderboard)
-	r.Get("/api/players/leaderboards/crafting/top-ten", playerHandler.ListCraftingTopTen)
-	r.Get("/api/players/leaderboards/story", playerHandler.ListStoryLeaderboard)
+	r.Get("/api/players/leaderboards/server/limit/{limit}", playerHandler.ListServerLeaderboard)
+	r.Get("/api/players/leaderboards/combat/limit/{limit}", playerHandler.ListCombatLeaderboard)
+	r.Get("/api/players/leaderboards/crafting/limit/{limit}", playerHandler.ListCraftingLeaderboard)
+	r.Get("/api/players/leaderboards/adventure/limit/{limit}", playerHandler.ListAdventureLeaderboard)
 	r.Get("/api/players/leaderboards/combat/{uuid}", playerHandler.GetCombatLeaderboardPlayer)
 	r.Get("/api/players/leaderboards/crafting/{uuid}", playerHandler.GetCraftingLeaderboardPlayer)
-	r.Get("/api/players/leaderboards/story/{uuid}", playerHandler.GetStoryLeaderboardPlayer)
+	r.Get("/api/players/leaderboards/adventure/{uuid}", playerHandler.GetAdventureLeaderboardPlayer)
 
 	// stat leaderboards
 	r.Get("/api/players/leaderboards/stats/{uuid}", playerHandler.GetStatRanks)
@@ -141,5 +138,13 @@ type config struct {
 }
 
 type dbConfig struct {
-	dsn string
+	dsn        string
+	gameLogger GameLogger
 }
+
+type GameLogger string
+
+const (
+	Grieflogger GameLogger = "grieflogger"
+	Ledger      GameLogger = "ledger"
+)

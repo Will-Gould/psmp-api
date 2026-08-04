@@ -8,21 +8,26 @@ import (
 	"slices"
 	"sort"
 
+	Uuid "github.com/google/uuid"
+
 	"github.com/Will-Gould/psmp-api/internal/cache"
 	"github.com/Will-Gould/psmp-api/internal/json"
 	responsemodels "github.com/Will-Gould/psmp-api/internal/response_models"
+	"github.com/Will-Gould/psmp-api/internal/translation"
 	"github.com/go-chi/chi"
 )
 
 type playerHandler struct {
-	service   Service
-	dataStore *cache.DataStore
+	service    Service
+	dataStore  *cache.DataStore
+	gameLogger string
 }
 
-func NewHandler(service Service, ds *cache.DataStore) *playerHandler {
+func NewHandler(service Service, ds *cache.DataStore, gameLogger string) *playerHandler {
 	return &playerHandler{
-		service:   service,
-		dataStore: ds,
+		service:    service,
+		dataStore:  ds,
+		gameLogger: gameLogger,
 	}
 }
 
@@ -31,7 +36,7 @@ func (ph *playerHandler) Load(ctx context.Context) {
 	ph.formServerRanks()
 	ph.formCombatRanks()
 	ph.formCraftingRanks()
-	ph.formStoryRanks()
+	ph.formAdventureRanks()
 	ph.formStatRanks()
 }
 
@@ -65,7 +70,13 @@ func (ph *playerHandler) GetMostDangerousPlayer(w http.ResponseWriter, r *http.R
 	kdRanking := slices.Collect(maps.Values(ph.dataStore.Players))
 	ph.dataStore.Mu.RUnlock()
 	sort.Slice(kdRanking, func(i, j int) bool {
-		if kdRanking[i].CombatOverview.PvpKdRatio < kdRanking[j].CombatOverview.PvpKdRatio {
+		// Tie-breaker is total PvP kills if KdRatio is the same
+		if kdRanking[i].CombatOverview.PvpKdRatio == kdRanking[j].CombatOverview.PvpKdRatio {
+			if kdRanking[i].CombatOverview.PvpKills > kdRanking[j].CombatOverview.PvpKills {
+				return true
+			}
+		}
+		if kdRanking[i].CombatOverview.PvpKdRatio > kdRanking[j].CombatOverview.PvpKdRatio {
 			return true
 		}
 		return false
@@ -79,7 +90,7 @@ func (ph *playerHandler) GetBiggestBuilder(w http.ResponseWriter, r *http.Reques
 	buildRanking := slices.Collect(maps.Values(ph.dataStore.Players))
 	ph.dataStore.Mu.RUnlock()
 	sort.Slice(buildRanking, func(i, j int) bool {
-		if buildRanking[i].CraftingOverview.BlocksPlaced < buildRanking[j].CraftingOverview.BlocksPlaced {
+		if buildRanking[i].CraftingOverview.BlocksPlaced > buildRanking[j].CraftingOverview.BlocksPlaced {
 			return true
 		}
 		return false
@@ -96,23 +107,23 @@ func (ph *playerHandler) loadServerLeaderboard(ctx context.Context, md *cache.Ma
 
 	// build overviews
 	for _, p := range luckpermsPlayers {
-		glUser, err := ph.service.FindGriefLoggerUser(ctx, p.Uuid)
-		psmpStatsPlayer, err := ph.service.FindPsmpstatsPlayerByUuid(ctx, p.Uuid)
+		loggerUser, err := ph.findLoggerUser(ctx, p.Uuid)
+		psmpStatsPlayer, err := ph.service.FindPsmpstatsPlayer(ctx, p.Uuid)
 		if err != nil {
 			continue
 		}
 		player := &responsemodels.ServerPlayer{
 			Uuid:         p.Uuid,
-			Name:         glUser.Name,
+			Name:         loggerUser.Name,
 			PrimaryGroup: p.PrimaryGroup,
 		}
-		ph.getPlayerData(ctx, player, md, glUser.ID, psmpStatsPlayer.ID)
+		ph.getPlayerData(ctx, player, md, loggerUser.ID, psmpStatsPlayer.ID)
 
 		ph.dataStore.Players[player.Uuid] = *player
 	}
 }
 
-func (ph *playerHandler) getPlayerData(ctx context.Context, player *responsemodels.ServerPlayer, md *cache.MappingData, glId int32, psmpStatsId int32) {
+func (ph *playerHandler) getPlayerData(ctx context.Context, player *responsemodels.ServerPlayer, md *cache.MappingData, loggerId int32, psmpStatsId int32) {
 
 	// get combat overview
 	combatOverview, err := ph.getCombatOverview(ctx, psmpStatsId)
@@ -121,30 +132,30 @@ func (ph *playerHandler) getPlayerData(ctx context.Context, player *responsemode
 	}
 
 	// get crafting overview
-	craftingOverview, err := ph.getCraftingOverview(ctx, glId, psmpStatsId, md)
+	craftingOverview, err := ph.getCraftingOverview(ctx, loggerId, psmpStatsId, md)
 	if err != nil {
 		slog.Log(ctx, slog.LevelError, err.Error())
 	}
 
 	// get story overview
-	storyOverview, err := ph.getStoryOverview(ctx, psmpStatsId)
+	adventureOverview, err := ph.getAdventureOverview(ctx, psmpStatsId)
 	if err != nil {
 		slog.Log(ctx, slog.LevelError, err.Error())
 	}
 
 	player.CombatOverview = combatOverview
 	player.CraftingOverview = craftingOverview
-	player.StoryOverview = storyOverview
+	player.AdventureOverview = adventureOverview
 
 	// calculate total score
-	player.Score = player.CombatOverview.CombatScore + player.CraftingOverview.CraftingScore + player.StoryOverview.StoryScore
+	player.Score = player.CombatOverview.CombatScore + player.CraftingOverview.CraftingScore + player.AdventureOverview.AdventureScore
 }
 
 func (ph *playerHandler) formServerRanks() {
 	// get player slice and sort by score
 	l := slices.Collect(maps.Values(ph.dataStore.Players))
 	sort.Slice(l, func(i, j int) bool {
-		if l[i].Score < l[j].Score {
+		if l[i].Score > l[j].Score {
 			return true
 		}
 		return false
@@ -161,7 +172,7 @@ func (ph *playerHandler) formCombatRanks() {
 	// copy player to slice and sort by combat score
 	l := slices.Collect(maps.Values(ph.dataStore.Players))
 	sort.Slice(l, func(i, j int) bool {
-		if l[i].CombatOverview.CombatScore < l[j].CombatOverview.CombatScore {
+		if l[i].CombatOverview.CombatScore > l[j].CombatOverview.CombatScore {
 			return true
 		}
 		return false
@@ -186,7 +197,7 @@ func (ph *playerHandler) formCraftingRanks() {
 	// copy player to slice and sort by crafting score
 	l := slices.Collect(maps.Values(ph.dataStore.Players))
 	sort.Slice(l, func(i, j int) bool {
-		if l[i].CraftingOverview.CraftingScore < l[j].CraftingOverview.CraftingScore {
+		if l[i].CraftingOverview.CraftingScore > l[j].CraftingOverview.CraftingScore {
 			return true
 		}
 		return false
@@ -206,24 +217,26 @@ func (ph *playerHandler) formCraftingRanks() {
 	}
 }
 
-func (ph *playerHandler) formStoryRanks() {
+func (ph *playerHandler) formAdventureRanks() {
 	// copy player to slice and sort by story score
 	l := slices.Collect(maps.Values(ph.dataStore.Players))
 	sort.Slice(l, func(i, j int) bool {
-		if l[i].StoryOverview.StoryScore < l[j].StoryOverview.StoryScore {
+		if l[i].AdventureOverview.AdventureScore > l[j].AdventureOverview.AdventureScore {
 			return true
 		}
 		return false
 	})
 
 	for i, sp := range l {
-		lp := responsemodels.StoryLeaderboardPlayer{
+		lp := responsemodels.AdventureLeaderboardPlayer{
 			Uuid:         sp.Uuid,
 			Name:         sp.Name,
 			PrimaryGroup: sp.PrimaryGroup,
 			Rank:         int64(i) + 1,
+			Advancements: int64(sp.AdventureOverview.Advancements),
+			FishCaught:   sp.AdventureOverview.FishCaught,
 		}
-		ph.dataStore.StoryLeaderboard[sp.Uuid] = lp
+		ph.dataStore.AdventureLeaderboard[sp.Uuid] = lp
 	}
 }
 
@@ -239,7 +252,7 @@ func (ph *playerHandler) formStatRanks() {
 
 	// order for blocks placed ranks
 	sort.Slice(playersSlice, func(i, j int) bool {
-		if playersSlice[i].CraftingOverview.BlocksPlaced < playersSlice[j].CraftingOverview.BlocksPlaced {
+		if playersSlice[i].CraftingOverview.BlocksPlaced > playersSlice[j].CraftingOverview.BlocksPlaced {
 			return true
 		}
 		return false
@@ -251,7 +264,7 @@ func (ph *playerHandler) formStatRanks() {
 
 	// order for blocks broken ranks
 	sort.Slice(playersSlice, func(i, j int) bool {
-		if playersSlice[i].CraftingOverview.BlocksBroken < playersSlice[j].CraftingOverview.BlocksBroken {
+		if playersSlice[i].CraftingOverview.BlocksBroken > playersSlice[j].CraftingOverview.BlocksBroken {
 			return true
 		}
 		return false
@@ -261,7 +274,7 @@ func (ph *playerHandler) formStatRanks() {
 
 	// order for diamonds mined ranks
 	sort.Slice(playersSlice, func(i, j int) bool {
-		if playersSlice[i].CraftingOverview.DiamondsMined < playersSlice[j].CraftingOverview.DiamondsMined {
+		if playersSlice[i].CraftingOverview.DiamondsMined > playersSlice[j].CraftingOverview.DiamondsMined {
 			return true
 		}
 		return false
@@ -271,7 +284,7 @@ func (ph *playerHandler) formStatRanks() {
 
 	// order for time played ranks
 	sort.Slice(playersSlice, func(i, j int) bool {
-		if playersSlice[i].CraftingOverview.TimePlayed < playersSlice[j].CraftingOverview.TimePlayed {
+		if playersSlice[i].CraftingOverview.TimePlayed > playersSlice[j].CraftingOverview.TimePlayed {
 			return true
 		}
 		return false
@@ -281,7 +294,7 @@ func (ph *playerHandler) formStatRanks() {
 
 	// order for pvp kills ranks
 	sort.Slice(playersSlice, func(i, j int) bool {
-		if playersSlice[i].CombatOverview.PvpKills < playersSlice[j].CombatOverview.PvpKills {
+		if playersSlice[i].CombatOverview.PvpKills > playersSlice[j].CombatOverview.PvpKills {
 			return true
 		}
 		return false
@@ -291,6 +304,7 @@ func (ph *playerHandler) formStatRanks() {
 
 	// order for deaths ranks
 	sort.Slice(playersSlice, func(i, j int) bool {
+		// Less deaths = higher rank
 		if playersSlice[i].CombatOverview.Deaths < playersSlice[j].CombatOverview.Deaths {
 			return true
 		}
@@ -301,7 +315,7 @@ func (ph *playerHandler) formStatRanks() {
 
 	// order for mob kills ranks
 	sort.Slice(playersSlice, func(i, j int) bool {
-		if playersSlice[i].CombatOverview.MobKills < playersSlice[j].CombatOverview.MobKills {
+		if playersSlice[i].CombatOverview.MobKills > playersSlice[j].CombatOverview.MobKills {
 			return true
 		}
 		return false
@@ -311,7 +325,7 @@ func (ph *playerHandler) formStatRanks() {
 
 	// order for pvp kd ratio ranks
 	sort.Slice(playersSlice, func(i, j int) bool {
-		if playersSlice[i].CombatOverview.PvpKdRatio < playersSlice[j].CombatOverview.PvpKdRatio {
+		if playersSlice[i].CombatOverview.PvpKdRatio > playersSlice[j].CombatOverview.PvpKdRatio {
 			return true
 		}
 		return false
@@ -326,4 +340,35 @@ func transferRanks(players []responsemodels.ServerPlayer, l map[string]responsem
 		lp.Rank = int64(i) + 1
 		l[p.Uuid] = lp
 	}
+}
+
+func (ph *playerHandler) findLoggerUser(ctx context.Context, uuid string) (translation.LoggerUser, error) {
+	loggerUser := translation.LoggerUser{}
+	switch ph.gameLogger {
+	case "grieflogger":
+		glUser, err := ph.service.FindGriefLoggerUser(ctx, uuid)
+		if err != nil {
+			slog.Log(ctx, slog.LevelDebug, "Unable to find Grieflogger user")
+			return loggerUser, err
+		}
+		loggerUser.ID = glUser.ID
+		loggerUser.Name = glUser.Name
+		loggerUser.Uuid = glUser.Uuid
+	default:
+		parsedUuid, err := Uuid.Parse(uuid)
+		if err != nil {
+			slog.Log(ctx, slog.LevelDebug, "Error parsing uuid")
+			return loggerUser, err
+		}
+		ledgerUser, err := ph.service.FindLedgerPlayer(ctx, parsedUuid[:])
+		if err != nil {
+			slog.Log(ctx, slog.LevelDebug, "Unable to find Ledger player")
+			return loggerUser, err
+		}
+		loggerUser.ID = ledgerUser.ID
+		loggerUser.Name = ledgerUser.PlayerName
+		loggerUser.Uuid = uuid
+	}
+
+	return loggerUser, nil
 }

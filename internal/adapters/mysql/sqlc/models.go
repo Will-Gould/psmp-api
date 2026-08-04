@@ -4,6 +4,34 @@
 
 package repo
 
+import (
+	"database/sql"
+	"time"
+)
+
+type Action struct {
+	ID            int32          `json:"id"`
+	ActionID      int32          `json:"action_id"`
+	Time          time.Time      `json:"time"`
+	X             int32          `json:"x"`
+	Y             int32          `json:"y"`
+	Z             int32          `json:"z"`
+	WorldID       int32          `json:"world_id"`
+	ObjectID      int32          `json:"object_id"`
+	OldObjectID   int32          `json:"old_object_id"`
+	BlockState    sql.NullString `json:"block_state"`
+	OldBlockState sql.NullString `json:"old_block_state"`
+	Source        int32          `json:"source"`
+	PlayerID      sql.NullInt32  `json:"player_id"`
+	ExtraData     sql.NullString `json:"extra_data"`
+	RolledBack    bool           `json:"rolled_back"`
+}
+
+type Actionidentifier struct {
+	ID               int32  `json:"id"`
+	ActionIdentifier string `json:"action_identifier"`
+}
+
 type Block struct {
 	Time   int64 `json:"time"`
 	User   int32 `json:"user"`
@@ -24,6 +52,19 @@ type LuckpermsPlayer struct {
 type Material struct {
 	ID   int32  `json:"id"`
 	Name string `json:"name"`
+}
+
+type Objectidentifier struct {
+	ID         int32  `json:"id"`
+	Identifier string `json:"identifier"`
+}
+
+type Player struct {
+	ID         int32     `json:"id"`
+	PlayerID   []byte    `json:"player_id"`
+	PlayerName string    `json:"player_name"`
+	FirstJoin  time.Time `json:"first_join"`
+	LastJoin   time.Time `json:"last_join"`
 }
 
 type PsmpstatsAdvancement struct {
@@ -61,6 +102,13 @@ type PsmpstatsDiamondsMined struct {
 	Time     int32 `json:"time"`
 }
 
+type PsmpstatsFish struct {
+	PlayerID int32  `json:"player_id"`
+	Time     int32  `json:"time"`
+	Fish     string `json:"fish"`
+	Size     int32  `json:"size"`
+}
+
 type PsmpstatsMob struct {
 	ID   uint64 `json:"id"`
 	Name string `json:"name"`
@@ -87,6 +135,12 @@ type PsmpstatsPlayerAdvancement struct {
 	Advancement int32 `json:"advancement"`
 }
 
+type PsmpstatsSession struct {
+	PlayerID int32 `json:"player_id"`
+	Time     int32 `json:"time"`
+	Action   int32 `json:"action"`
+}
+
 type Session struct {
 	Time   int64 `json:"time"`
 	User   int32 `json:"user"`
@@ -95,6 +149,11 @@ type Session struct {
 	Y      int32 `json:"y"`
 	Z      int32 `json:"z"`
 	Action int32 `json:"action"`
+}
+
+type Source struct {
+	ID   int32  `json:"id"`
+	Name string `json:"name"`
 }
 
 type User struct {

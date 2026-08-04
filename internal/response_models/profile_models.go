@@ -4,7 +4,7 @@ type PlayerProfile struct {
 	Player                ServerPlayer
 	CombatRank            int64
 	CraftingRank          int64
-	StoryRank             int64
+	AdventureRank         int64
 	StatLeaderboardPlayer StatLeaderboardPlayer
 }
 

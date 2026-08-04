@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"flag"
 	"log/slog"
 	"os"
 	"time"
@@ -19,12 +20,16 @@ func main() {
 
 	godotenv.Load(".env")
 
+	gameLogger := flag.String("l", "ledger", "Server mod used for action logging (either grieflogger or ledger)")
+	flag.Parse()
+
 	assets.PrintLogo()
 
 	cfg := config{
 		addr: ":8080",
 		db: dbConfig{
-			dsn: env.GetString("GOOSE_DBSTRING", "username:password@tcp(localhost:3306)/dummy?parseTime=true"),
+			dsn:        env.GetString("GOOSE_DBSTRING", "username:password@tcp(localhost:3306)/dummy?parseTime=true"),
+			gameLogger: GameLogger(*gameLogger),
 		},
 	}
 

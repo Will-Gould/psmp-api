@@ -1,49 +1,17 @@
 version: "2"
 sql:
-  - name: "grieflogger"
+  - name: ""
     engine: "mysql"
     queries: 
-      - "./internal/adapters/mysql/sqlc/grieflogger_queries.sql"
-    schema: "./internal/adapters/mysql/migrations/grieflogger"
+      - "./internal/adapters/mysql/sqlc/queries/"
+    schema: 
+      - "./internal/adapters/mysql/migrations/grieflogger"
+      - "./internal/adapters/mysql/migrations/ledger"
+      - "./internal/adapters/mysql/migrations/luckperms"
+      - "./internal/adapters/mysql/migrations/psmpstats"
     gen:
       go:
         package: "repo"
         out: "./internal/adapters/mysql/sqlc"
         emit_json_tags: true
         emit_interface: true # Generate Querier interface
-
-  - name: "ledger"
-    engine: "mysql"
-    queries:
-      - "./internal/adapters/mysql/sqlc/ledger_queries.sql"
-    schema: "./internal/adapters/mysql/migrations/ledger"
-    gen:
-      go:
-        package: "repo"
-        out: "./internal/adapters/mysql/sqlc"
-        emit_json_tags: true
-        emit_interface: true
-
-  - name: "luckperms"
-    engine: "mysql"
-    queries:
-      - "./internal/adapters/mysql/sqlc/luckperms_queries.sql"
-    schema: "./internal/adapters/mysql/migrations/luckperms"
-    gen:
-      go:
-        package: "repo"
-        out: "./internal/adapters/mysql/sqlc"
-        emit_json_tags: true
-        emit_interface: true
-
-  - name: "psmpstats"
-    engine: "mysql"
-    queries:
-      - "./internal/adapters/mysql/sqlc/psmpstats_queries.sql"
-    schema: "./internal/adapters/mysql/migrations/psmpstats"
-    gen:
-      go:
-        package: "repo"
-        out: "./internal/adapters/mysql/sqlc"
-        emit_json_tags: true
-        emit_interface: true

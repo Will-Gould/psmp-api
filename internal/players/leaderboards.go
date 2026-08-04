@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"slices"
 	"sort"
+	"strconv"
 
 	"github.com/Will-Gould/psmp-api/internal/json"
 	responsemodels "github.com/Will-Gould/psmp-api/internal/response_models"
@@ -12,19 +13,11 @@ import (
 )
 
 func (ph *playerHandler) ListServerLeaderboard(w http.ResponseWriter, r *http.Request) {
-	ph.dataStore.Mu.RLock()
-	lb := slices.Collect(maps.Values(ph.dataStore.Players))
-	ph.dataStore.Mu.RUnlock()
-	sort.Slice(lb, func(i, j int) bool {
-		if lb[i].ServerRank < lb[j].ServerRank {
-			return true
-		}
-		return false
-	})
-	json.Write(w, http.StatusOK, lb)
-}
+	limit, err := strconv.Atoi(chi.URLParam(r, "limit"))
+	if err != nil {
+		limit = -1
+	}
 
-func (ph *playerHandler) ListServerTopTen(w http.ResponseWriter, r *http.Request) {
 	ph.dataStore.Mu.RLock()
 	lb := slices.Collect(maps.Values(ph.dataStore.Players))
 	ph.dataStore.Mu.RUnlock()
@@ -35,27 +28,24 @@ func (ph *playerHandler) ListServerTopTen(w http.ResponseWriter, r *http.Request
 		return false
 	})
 
-	if len(lb) <= 10 {
+	if limit < 0 {
+		json.Write(w, http.StatusOK, lb)
+		return
+	}
+
+	if len(lb) <= limit {
 		json.Write(w, http.StatusOK, lb)
 	} else {
-		json.Write(w, http.StatusOK, lb[:10])
+		json.Write(w, http.StatusOK, lb[:limit])
 	}
 }
 
 func (ph *playerHandler) ListCombatLeaderboard(w http.ResponseWriter, r *http.Request) {
-	ph.dataStore.Mu.RLock()
-	lb := slices.Collect(maps.Values(ph.dataStore.CombatLeaderboard))
-	ph.dataStore.Mu.RUnlock()
-	sort.Slice(lb, func(i, j int) bool {
-		if lb[i].Rank < lb[j].Rank {
-			return true
-		}
-		return false
-	})
-	json.Write(w, http.StatusOK, lb)
-}
+	limit, err := strconv.Atoi(chi.URLParam(r, "limit"))
+	if err != nil {
+		limit = -1
+	}
 
-func (ph *playerHandler) ListCombatTopTen(w http.ResponseWriter, r *http.Request) {
 	ph.dataStore.Mu.RLock()
 	lb := slices.Collect(maps.Values(ph.dataStore.CombatLeaderboard))
 	ph.dataStore.Mu.RUnlock()
@@ -66,27 +56,24 @@ func (ph *playerHandler) ListCombatTopTen(w http.ResponseWriter, r *http.Request
 		return false
 	})
 
-	if len(lb) <= 10 {
+	if limit < 0 {
+		json.Write(w, http.StatusOK, lb)
+		return
+	}
+
+	if len(lb) <= limit {
 		json.Write(w, http.StatusOK, lb)
 	} else {
-		json.Write(w, http.StatusOK, lb[:10])
+		json.Write(w, http.StatusOK, lb[:limit])
 	}
 }
 
 func (ph *playerHandler) ListCraftingLeaderboard(w http.ResponseWriter, r *http.Request) {
-	ph.dataStore.Mu.RLock()
-	lb := slices.Collect(maps.Values(ph.dataStore.CraftingLeaderboard))
-	ph.dataStore.Mu.RUnlock()
-	sort.Slice(lb, func(i, j int) bool {
-		if lb[i].Rank < lb[j].Rank {
-			return true
-		}
-		return false
-	})
-	json.Write(w, http.StatusOK, lb)
-}
+	limit, err := strconv.Atoi(chi.URLParam(r, "limit"))
+	if err != nil {
+		limit = -1
+	}
 
-func (ph *playerHandler) ListCraftingTopTen(w http.ResponseWriter, r *http.Request) {
 	ph.dataStore.Mu.RLock()
 	lb := slices.Collect(maps.Values(ph.dataStore.CraftingLeaderboard))
 	ph.dataStore.Mu.RUnlock()
@@ -96,16 +83,27 @@ func (ph *playerHandler) ListCraftingTopTen(w http.ResponseWriter, r *http.Reque
 		}
 		return false
 	})
-	if len(lb) <= 10 {
+
+	if limit < 0 {
+		json.Write(w, http.StatusOK, lb)
+		return
+	}
+
+	if len(lb) <= limit {
 		json.Write(w, http.StatusOK, lb)
 	} else {
-		json.Write(w, http.StatusOK, lb[:10])
+		json.Write(w, http.StatusOK, lb[:limit])
 	}
 }
 
-func (ph *playerHandler) ListStoryLeaderboard(w http.ResponseWriter, r *http.Request) {
+func (ph *playerHandler) ListAdventureLeaderboard(w http.ResponseWriter, r *http.Request) {
+	limit, err := strconv.Atoi(chi.URLParam(r, "limit"))
+	if err != nil {
+		limit = -1
+	}
+
 	ph.dataStore.Mu.RLock()
-	lb := slices.Collect(maps.Values(ph.dataStore.StoryLeaderboard))
+	lb := slices.Collect(maps.Values(ph.dataStore.AdventureLeaderboard))
 	ph.dataStore.Mu.RUnlock()
 	sort.Slice(lb, func(i, j int) bool {
 		if lb[i].Rank < lb[j].Rank {
@@ -113,7 +111,17 @@ func (ph *playerHandler) ListStoryLeaderboard(w http.ResponseWriter, r *http.Req
 		}
 		return false
 	})
-	json.Write(w, http.StatusOK, lb)
+
+	if limit < 0 {
+		json.Write(w, http.StatusOK, lb)
+		return
+	}
+
+	if len(lb) <= limit {
+		json.Write(w, http.StatusOK, lb)
+	} else {
+		json.Write(w, http.StatusOK, lb[:limit])
+	}
 }
 
 func (ph *playerHandler) GetCombatLeaderboardPlayer(w http.ResponseWriter, r *http.Request) {
@@ -140,10 +148,10 @@ func (ph *playerHandler) GetCraftingLeaderboardPlayer(w http.ResponseWriter, r *
 	}
 }
 
-func (ph *playerHandler) GetStoryLeaderboardPlayer(w http.ResponseWriter, r *http.Request) {
+func (ph *playerHandler) GetAdventureLeaderboardPlayer(w http.ResponseWriter, r *http.Request) {
 	uuid := chi.URLParam(r, "uuid")
 	ph.dataStore.Mu.RLock()
-	lp, ok := ph.dataStore.StoryLeaderboard[uuid]
+	lp, ok := ph.dataStore.AdventureLeaderboard[uuid]
 	ph.dataStore.Mu.RUnlock()
 	if ok {
 		json.Write(w, http.StatusOK, lp)

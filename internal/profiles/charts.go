@@ -5,11 +5,11 @@ import (
 	"time"
 
 	repo "github.com/Will-Gould/psmp-api/internal/adapters/mysql/sqlc"
-	"github.com/Will-Gould/psmp-api/internal/mapping"
 	responsemodels "github.com/Will-Gould/psmp-api/internal/response_models"
+	"github.com/Will-Gould/psmp-api/internal/translation"
 )
 
-func getAllTimeSingleDailySlice(firstJoin repo.Session) []responsemodels.SingleDailyChartItem {
+func getAllTimeSingleDailySlice(firstJoin translation.Session) []responsemodels.SingleDailyChartItem {
 	data := []responsemodels.SingleDailyChartItem{}
 
 	firstTime := time.Unix(int64(firstJoin.Time/1000), 0).Local()
@@ -29,7 +29,7 @@ func getAllTimeSingleDailySlice(firstJoin repo.Session) []responsemodels.SingleD
 	return data
 }
 
-func GetMobKillChartData(mobKills []repo.PsmpstatsMobKill, firstJoin repo.Session) responsemodels.SingleDailyChart {
+func GetMobKillChartData(mobKills []repo.PsmpstatsMobKill, firstJoin translation.Session) responsemodels.SingleDailyChart {
 
 	sort.Slice(mobKills, func(i, j int) bool {
 		if mobKills[i].Time < mobKills[j].Time {
@@ -70,7 +70,7 @@ func GetMobKillChartData(mobKills []repo.PsmpstatsMobKill, firstJoin repo.Sessio
 	return chart
 }
 
-func GetTotalBlocksChartData(blocks []repo.Block) responsemodels.DoubleDailyChart {
+func GetTotalBlocksChartData(blocks []translation.Block, actions map[string]int32) responsemodels.DoubleDailyChart {
 	data := []responsemodels.DoubleDailyChartItem{}
 
 	sort.Slice(blocks, func(i, j int) bool {
@@ -99,10 +99,10 @@ func GetTotalBlocksChartData(blocks []repo.Block) responsemodels.DoubleDailyChar
 
 			if d.Date == blockDate {
 
-				if b.Action == mapping.BLOCK_PLACED_ACTION {
+				if b.Action == actions["block-break"] {
 					data[j].Value1 += 1
 				}
-				if b.Action == mapping.BLOCK_BROKEN_ACTION {
+				if b.Action == actions["block-place"] {
 					data[j].Value2 += 1
 				}
 			}
@@ -127,7 +127,7 @@ func GetTotalBlocksChartData(blocks []repo.Block) responsemodels.DoubleDailyChar
 	return chart
 }
 
-func GetDeathsChartData(deaths []repo.PsmpstatsDeath, firstJoin repo.Session) responsemodels.SingleDailyChart {
+func GetDeathsChartData(deaths []repo.PsmpstatsDeath, firstJoin translation.Session) responsemodels.SingleDailyChart {
 	sort.Slice(deaths, func(i, j int) bool {
 		if deaths[i].Time < deaths[j].Time {
 			return true

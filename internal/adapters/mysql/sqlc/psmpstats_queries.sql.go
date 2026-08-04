@@ -42,6 +42,22 @@ func (q *Queries) CountDiamondsMinedById(ctx context.Context, playerID int32) (i
 	return count, err
 }
 
+const countFishCaughtByPlayer = `-- name: CountFishCaughtByPlayer :one
+SELECT
+  count(*)
+FROM
+  psmpstats_fish
+WHERE
+  player_id = ?
+`
+
+func (q *Queries) CountFishCaughtByPlayer(ctx context.Context, playerID int32) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countFishCaughtByPlayer, playerID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countMobsKilledById = `-- name: CountMobsKilledById :one
 SELECT
   count(*)
@@ -102,6 +118,26 @@ func (q *Queries) CountSpecificMobKillsById(ctx context.Context, arg CountSpecif
 	var count int64
 	err := row.Scan(&count)
 	return count, err
+}
+
+const findPsmpstatsFirstJoinById = `-- name: FindPsmpstatsFirstJoinById :one
+SELECT
+  player_id, time, action
+FROM
+  psmpstats_sessions
+WHERE
+  player_id = ?
+ORDER BY
+  time
+ASC
+LIMIT 1
+`
+
+func (q *Queries) FindPsmpstatsFirstJoinById(ctx context.Context, playerID int32) (PsmpstatsSession, error) {
+	row := q.db.QueryRowContext(ctx, findPsmpstatsFirstJoinById, playerID)
+	var i PsmpstatsSession
+	err := row.Scan(&i.PlayerID, &i.Time, &i.Action)
+	return i, err
 }
 
 const findPsmpstatsPlayerByUuid = `-- name: FindPsmpstatsPlayerByUuid :one
@@ -430,6 +466,38 @@ func (q *Queries) ListPlayerAdvancementsById(ctx context.Context, playerID int32
 	for rows.Next() {
 		var i PsmpstatsPlayerAdvancement
 		if err := rows.Scan(&i.PlayerID, &i.Time, &i.Advancement); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPsmpstatsSessionsById = `-- name: ListPsmpstatsSessionsById :many
+SELECT
+  player_id, time, action
+FROM
+  psmpstats_sessions
+WHERE
+  player_id = ?
+`
+
+func (q *Queries) ListPsmpstatsSessionsById(ctx context.Context, playerID int32) ([]PsmpstatsSession, error) {
+	rows, err := q.db.QueryContext(ctx, listPsmpstatsSessionsById, playerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PsmpstatsSession
+	for rows.Next() {
+		var i PsmpstatsSession
+		if err := rows.Scan(&i.PlayerID, &i.Time, &i.Action); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

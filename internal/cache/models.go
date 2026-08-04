@@ -8,22 +8,23 @@ import (
 )
 
 type DataStore struct {
-	Mu                  sync.RWMutex
-	MappingData         MappingData
-	Players             map[string]responsemodels.ServerPlayer
-	CombatLeaderboard   map[string]responsemodels.CombatLeaderboardPlayer
-	CraftingLeaderboard map[string]responsemodels.CraftingLeaderboardPlayer
-	StoryLeaderboard    map[string]responsemodels.StoryLeaderboardPlayer
-	StatLeaderboards    StatLeaderboards
+	Mu                   sync.RWMutex
+	MappingData          MappingData
+	Players              map[string]responsemodels.ServerPlayer
+	CombatLeaderboard    map[string]responsemodels.CombatLeaderboardPlayer
+	CraftingLeaderboard  map[string]responsemodels.CraftingLeaderboardPlayer
+	AdventureLeaderboard map[string]responsemodels.AdventureLeaderboardPlayer
+	StatLeaderboards     StatLeaderboards
 }
 
 type MappingData struct {
-	Materials             []repo.Material
-	BannedPlacedMaterials []int32
-	BannedBrokenMaterials []int32
-	CauseMapping          []repo.PsmpstatsCause
-	MobMapping            []repo.PsmpstatsMob
-	AdvancementMapping    []repo.PsmpstatsAdvancement
+	Objects             []Object
+	Actions             map[string]int32
+	BannedPlacedObjects []int32
+	BannedBrokenObjects []int32
+	CauseMapping        []repo.PsmpstatsCause
+	MobMapping          []repo.PsmpstatsMob
+	AdvancementMapping  []repo.PsmpstatsAdvancement
 }
 
 type StatLeaderboards struct {
@@ -35,4 +36,10 @@ type StatLeaderboards struct {
 	DeathsLeaderboard        map[string]responsemodels.LeaderboardPlayer
 	MobKillsLeaderboard      map[string]responsemodels.LeaderboardPlayer
 	PvpKdRatioLeaderboard    map[string]responsemodels.LeaderboardPlayer
+}
+
+// An object in the case
+type Object struct {
+	ID   int32
+	Name string
 }
